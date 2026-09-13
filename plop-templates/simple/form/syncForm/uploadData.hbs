@@ -1,0 +1,15 @@
+export default [
+  {
+    url: '/{{timestamp}}/upload/uploadform',
+    type: 'post',
+    response: config => {
+      return {
+        code: 20000,
+        data: config.body,
+        success: true,
+        message: '成功',
+        detail: '成功请求的详情--20000--successed.'
+      }
+    }
+  }
+]

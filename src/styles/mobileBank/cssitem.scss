@@ -1,0 +1,192 @@
+// Header页修改样式
+.page-header-main {
+    margin-top: 88px;
+    .page-title {
+        font-size: 30px;
+    }
+    .mint-header {
+        .mint-button {
+            line-height: 40px;
+        }
+    }
+}
+
+// tabbar页修改样式
+.page-tabbar {
+    .page-tabbar-wrap {
+        padding: 88px 0 98px 0;
+        .mint-cell {
+            height: 88px;
+            .mint-cell-wrapper {
+                font-size: 30px;
+                height: 88px;
+                padding: 0 32px;
+            }
+        }
+    }
+}
+
+// navbar页修改样式
+.page-navbar {
+    .page-navbar-wrapper {
+        margin-top: 88px;
+        .mint-navbar {
+            height: 88px;
+            .mint-tab-item {
+                .mint-tab-item-label {
+                    font-size: 30px !important;
+                    line-height: 88px;
+                }
+            }
+        }
+        .mint-cell {
+            height: 88px;
+            .mint-cell-wrapper {
+                font-size: 30px;
+                height: 88px;
+                padding: 0 32px;
+            }
+        }
+    }
+}
+
+// button页修改样式
+.page-button {
+    .page-button-wrapper {
+        margin-top: 98px;
+        padding: 0 32px;
+        .page-button-group {
+            margin-top: 10px;
+            .mint-button--large {
+                width: 686px;
+                height: 88px;
+                border-radius: 8px;
+            }
+            .mint-button {
+                margin: 10px 0 0;
+                font-size: 36px;
+                height: 88px;
+            }
+            .mint-button--default {
+                background-color: #ffa900;
+                color: #fff;
+                font-weight: 500;
+            }
+            .mint-button--default.is-plain {
+                border: 0.01rem solid #ffa900;
+                background-color: transparent;
+                -webkit-box-shadow: none;
+                box-shadow: none;
+                color: #ffa900;
+            }
+        }
+    }
+}
+
+// cell页修改样式
+.page-cell {
+    .page-cell-wrapper {
+        margin-top: 88px;
+        .mint-cell {
+            height: 88px;
+            .mint-cell-wrapper {
+                font-size: 30px;
+                height: 88px;
+                padding: 0 32px;
+                .mint-cell-allow-right::after {
+                    width: 20px;
+                    height: 20px;
+                }
+                .mint-button--small {
+                    font-size: 0.30rem;
+                    height: 0.60rem;
+                    .mintui-back {
+                        font-size: 30px;
+                    }
+                }
+                .mint-cell-label {
+                    font-size: 24px;
+                    color: #999;
+                    margin: 4px 20px 0 0;
+                }
+                .mint-cell-value.is-link {
+                    margin-right: 0.32rem;
+                }
+                .mint-cell-allow-right::after {
+                    right: 0.3rem;
+                }
+            }
+        }
+    }
+}
+
+// cellswipe页修改样式
+.page-cell {
+    .page-cellswipe-wrapper {
+        margin-top: 88px;
+        .mint-cell-swipe {
+            .mint-cell-wrapper {
+                height: 88px;
+                font-size: 30px;
+                padding: 0 32px;
+            }
+            .mint-cell-right {
+                .mint-cell-swipe-button {
+                    line-height: 88px;
+                }
+            }
+        }
+    }
+}
+
+// spinner页修改样式
+.page-spinner {
+    .page-spinner-wrapper {
+        margin-top: 88px;
+        .mint-cell {
+            .mint-cell-wrapper {
+                height: 88px;
+                font-size: 30px;
+                padding: 0 32px;
+            }
+        }
+    }
+}
+
+// tab-container页修改样式
+.page-tab-container {
+    .page-tab-container-wrapper {
+        margin-top: 88px;
+        .nav {
+            .mint-button--small {
+                height: 66px;
+                font-size: 30px;
+            }
+        }
+        .mint-tab-container {
+            .mint-cell-wrapper {
+                height: 88px;
+                font-size: 32px;
+                padding: 0 32px;
+            }
+        }
+    }
+}
+
+.mint-msgbox-wrapper {
+    .mint-msgbox {
+        font-size: 30px;
+        .mint-msgbox-title {
+            font-size: 30px;
+            margin-bottom: 64px;
+        }
+        .mint-msgbox-btns {
+            height: 100px;
+            font-size: 36px;
+            border-top: 1px solid #e5e5e5;
+            .mint-msgbox-confirm {
+                color: #ffa900;
+            }
+        }
+    }
+}

@@ -1,0 +1,62 @@
+const data = require('./json/data.json')
+const data1 = require('./json/data1.json')
+const data2 = require('./json/data2.json')
+const allData1 = require('./json/allLoadData1.json')
+const allData2 = require('./json/allLoadData2.json')
+
+export default [
+  {
+    url: '/{{timestamp}}/api/allData1',
+    type: 'get',
+    response: () => {
+      return {
+        code: 20000,
+        data: allData1,
+        success: true,
+        message: '成功',
+        detail: '成功请求的详情--20000--successed.'
+      }
+    }
+  },
+  {
+    url: '/{{timestamp}}/api/allData2',
+    type: 'get',
+    response: () => {
+      return {
+        code: 20000,
+        data: allData2,
+        success: true,
+        message: '成功',
+        detail: '成功请求的详情--20000--successed.'
+      }
+    }
+  },
+  {
+    url: '/{{timestamp}}/api/data',
+    type: 'get',
+    response: res => {
+      const {
+        id
+      } = res.query
+      let resultData
+      switch (Number(id)) {
+        case 999:
+          resultData = data1
+          break
+        case 2:
+          resultData = data2
+          break
+        default:
+          resultData = data
+          break
+      }
+      return {
+        code: 20000,
+        data: resultData,
+        success: true,
+        message: '成功',
+        detail: '成功请求的详情--20000--successed.'
+      }
+    }
+  }
+]

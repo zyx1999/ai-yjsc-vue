@@ -1,0 +1,816 @@
+<template>
+  <div class="ud-form">
+    <div class="ud-form-desc">
+      <div class="title">双列表单（异步）样例</div>
+      <div class="description">使用了element的layout布局，包含了form表单中的所有控件，此样例是异步上传，表单和上传列表分别进行提交</div>
+    </div>
+    <el-form ref="form" :model="form" :rules="rules" :inline-message="true" label-width="200px" class="ud-form-content"
+      :label-position="labelPosition">
+      <!-- 普通输入框和必须输入框 -->
+      <el-row>
+        <el-col :span="8" :offset="2">
+          <el-form-item label="普通输入框" prop="notnecessaryItem">
+            <el-input v-model="form.notnecessaryItem" clearable :placeholder="tips1" />
+          </el-form-item>
+        </el-col>
+        <el-col :span="8" :offset="2">
+          <el-form-item label="必要输入框" prop="necessaryItem">
+            <el-input v-model="form.necessaryItem" clearable :placeholder="tips1" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <!-- 密码输入框和文本域输入框 -->
+      <el-row>
+        <el-col :span="8" :offset="2">
+          <el-form-item label="密码输入框" prop="password">
+            <el-input v-model="form.password" type="password" :placeholder="tips2" />
+          </el-form-item>
+        </el-col>
+        <el-col :span="8" :offset="2">
+          <el-form-item label="数字输入框" prop="mustnum">
+            <!-- oninput设置了输入框只能输入数字和小数点，并且小数点后保留两位；同时解决type="number"在IE下不兼容，还可以输入字母或者其他字符的bug -->
+            <el-input v-model="form.mustnum" :placeholder="tips1"
+              oninput="value = value.toString().match(/^\d+(?:\.\d{0,2})?/)" type="number" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <!-- 带icon的输入框组（包含前，后，属性插入icon，slot插入icon...） -->
+      <el-row>
+        <el-col :span="8" :offset="2">
+          <el-form-item label="属性引入icon输入框" prop="iconInput1">
+            <el-input v-model="form.iconInput1" :placeholder="tips1" prefix-icon="el-icon-search" />
+          </el-form-item>
+        </el-col>
+        <el-col :span="8" :offset="2">
+          <el-form-item label="属性引入icon输入框" prop="iconInput2">
+            <el-input v-model="form.iconInput2" :placeholder="tips1" suffix-icon="el-icon-search" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="8" :offset="2">
+          <el-form-item label="solt引入icon输入框" prop="iconInput3">
+            <el-input v-model="form.iconInput3" :placeholder="tips1">
+              <i slot="prefix" class="el-input__icon el-icon-search" />
+            </el-input>
+          </el-form-item>
+        </el-col>
+        <el-col :span="8" :offset="2">
+          <el-form-item label="solt引入icon输入框" prop="iconInput4">
+            <el-input v-model="form.iconInput4" :placeholder="tips1">
+              <i slot="suffix" class="el-input__icon el-icon-search" />
+            </el-input>
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <!-- 组合框（可选可输入）和单选下拉菜单（一级） -->
+      <el-row>
+        <!-- 组合框 -->
+        <el-col :span="8" :offset="2">
+          <el-form-item label="组合框" prop="combobox">
+            <el-autocomplete v-model="form.combobox" clearable :fetch-suggestions="querySearch" class="unified-style"
+              placeholder="请输入内容" />
+          </el-form-item>
+        </el-col>
+        <!-- 可清空单选下拉菜单 -->
+        <el-col :span="8" :offset="2">
+          <el-form-item label="下拉列表(单选)" prop="selectOne">
+            <el-select v-model="form.selectOne" :placeholder="tips3" clearable class="unified-style">
+              <el-option v-for="item in optionsSelect" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <!-- 大写状态提示框、时间选择框，日期选择框，日期时间选择框 -->
+      <el-row>
+        <!-- 大写状态提示框 -->
+        <el-col :span="8" :offset="2">
+          <el-form-item label="大写状态提示框" prop="capsValue">
+            <UdCapsLock :form-value="this.form.capsValue" @getCapsLockVal="getCapsLockVal" />
+          </el-form-item>
+        </el-col>
+        <!-- 日期选择（注：type属性可设置year/month/week/datetime/datetimerange/daterange,
+        分别表示年/月/日/日期+时间/从一个日期时间点-下一个日期时间点/从一个日期-另一个日期） -->
+        <el-col :span="8" :offset="2">
+          <el-form-item label="选择日期" prop="date">
+            <el-date-picker v-model="form.date" type="date" placeholder="请选择日期" class="unified-style" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row>
+        <!-- 日期和时间选择 -->
+        <el-col :span="8" :offset="2">
+          <el-form-item label="选择日期和时间" prop="dateAndTime">
+            <el-date-picker v-model="form.dateAndTime" type="datetime" placeholder="选择日期和时间" class="unified-style" />
+          </el-form-item>
+        </el-col>
+        <!-- 时间选择 -->
+        <el-col :span="8" :offset="2">
+          <el-form-item label="选择时间" prop="time">
+            <el-time-select v-model="form.time" :picker-options="timeOptions" class="unified-style" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <!-- 星级和开关 -->
+      <el-row>
+        <!-- 星级 -->
+        <el-col :span="8" :offset="2">
+          <el-form-item label="请选择星级" prop="rateValue">
+            <el-rate v-model="form.rateValue" />
+          </el-form-item>
+        </el-col>
+        <!-- 开关 -->
+        <el-col :span="8" :offset="2">
+          <el-form-item label="开关" prop="switchValue">
+            <el-switch v-model="form.switchValue" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <!-- 单选和多选(checkbox) -->
+      <el-row>
+        <!-- 多选 -->
+        <el-col :span="8" :offset="2">
+          <el-form-item label="多选" prop="checklist">
+            <el-checkbox-group v-model="form.checklist">
+              <el-checkbox label="A" />
+              <el-checkbox label="B" />
+              <el-checkbox label="C" />
+            </el-checkbox-group>
+          </el-form-item>
+        </el-col>
+        <!-- 单选 -->
+        <el-col :span="8" :offset="2">
+          <el-form-item label="单选" prop="radio">
+            <el-radio v-model="form.radio" label="1">A</el-radio>
+            <el-radio v-model="form.radio" label="2">B</el-radio>
+            <el-radio v-model="form.radio" label="3">C</el-radio>
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <!-- 联想输入框和可搜索创建下拉列表(多选) -->
+      <el-row>
+        <el-col :span="8" :offset="2">
+          <!-- 联想输入框 -->
+          <el-form-item label="联想输入框" prop="prvns">
+            <UdAutoComplete :data-list="prvnsList" class="prvns" :prompt-content="promptContent"
+              :empty-array="this.form.prvns" @getSelectedData="getSelectedData" />
+          </el-form-item>
+        </el-col>
+        <el-col :span="8" :offset="2">
+          <!-- 下拉列表多选 -->
+          <el-form-item label="可搜索下拉列表(多选)" prop="selectMore">
+            <el-select v-model="form.selectMore" multiple filterable allow-create :placeholder="tips3"
+              class="unified-style">
+              <el-option v-for="item in optionsSelect" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <!-- 复合型输入框（前，后，前后）通过slot实现 -->
+      <el-row>
+        <el-col :span="18" :offset="2">
+          <el-form-item label="复合型输入框（前）" prop="compositeInput1">
+            <el-input v-model="form.compositeInput1" :placeholder="tips1">
+              <template slot="prepend">http://</template>
+            </el-input>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="18" :offset="2">
+          <el-form-item label="复合型输入框（后）" prop="compositeInput2">
+            <el-input v-model="form.compositeInput2" :placeholder="tips1">
+              <template slot="append">.com</template>
+            </el-input>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="18" :offset="2">
+          <el-form-item label="复合型输入框（前后）" prop="compositeInput3">
+            <el-input v-model="form.compositeInput3" :placeholder="tips1">
+              <template slot="prepend">http://</template>
+              <template slot="append">.com</template>
+            </el-input>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="18" :offset="2">
+          <el-form-item label="人员选择框">
+            <UdStaffSelect v-model="form.personSelected" class="staff-select" :lazy="false"
+              :data="allLoadDataSource === 1 ? allLoadData1 : allLoadData2">
+              <div slot="dataSource" class="data-source-wrap">
+                <el-button type="primary" @click="allLoadDataSource = 1">数据源1</el-button>
+                <el-button type="primary" @click="allLoadDataSource = 2">数据源2</el-button>
+              </div>
+            </UdStaffSelect>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="18" :offset="2">
+          <el-form-item label="输入文本域" prop="textareaValue">
+            <el-input v-model="form.textareaValue" :rows="2" resize="none" type="textarea" :placeholder="tips1"
+              :autosize="{ minRows: 2, maxRows: 4}" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <!-- 文件上传 -->
+      <el-row>
+        <el-col :span="18" :offset="2">
+          <el-form-item label="文件上传">
+            <el-upload ref="upload" multiple :file-list="filelist" :on-change="filechange" :on-remove="fileremove"
+              :auto-upload="autoUpload" :on-success="successMessage" :on-error="errorMessage"
+              :before-upload="onBeforeUpload" class="uploadstyle" action="upload/uploadform">
+              <el-button>选择...</el-button>
+              <span style="color:#f15a4a">只能选择.wps</span>
+            </el-upload>
+          </el-form-item>
+        </el-col>
+        <el-col :span="18" :offset="2">
+          <el-form-item label="">
+            <el-button v-if="filelistcount" type="primary" plain @click="handUpload">手动上传</el-button>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="18" :offset="2">
+          <el-button type="primary" class="ud-form-button" @click="onSubmit(form)">确定</el-button>
+          <el-button class="ud-form-button" @click="reset">重置</el-button>
+        </el-col>
+      </el-row>
+    </el-form>
+  </div>
+</template>
+
+<script>
+  import { UdStaffSelect, UdCapsLock, UdAutoComplete, UdNotice } from 'udesk-vue'
+  import { uploadform } from '@/api/upload_demo_for_asyncForm{{timestamp}}' // 上传form表单——shuhh
+  import { getStaffSelectData } from '@/api/staffSelect_demo_for_asyncForm{{timestamp}}'
+  export default {
+    name: 'AsyncForm',
+    components: {
+      UdStaffSelect,
+      UdCapsLock,
+      UdAutoComplete
+    },
+    data() {
+      return {
+        uploadedCount: 0, // 已上传文件个数
+        uploadedFiles: [], // 已经上传成功的wps文件数组对象
+        arr: [], // 暂存非wps文件数组
+        uploadingCount: 0, // 即将上传文件的个数
+        allLoadDataSource: 1, // 默认dataSource是1
+        dataSource: 1,
+        allLoadData1: [], // 全量加载数据
+        allLoadData2: [],
+        tips1: '请输入内容',
+        tips2: '请输入密码',
+        tips3: '请选择',
+        // formSize: 'small', // 表单布局大小
+        // fontSize: 15, // 字体大小
+        labelPosition: 'right', // label居左或居右
+        capsKey: null, // 大小写标识
+        showOrHidden: false, // 大小写提示框提示tip框显示与否
+        mouseHandle: true, // 取消大小写框的mouseenter和mouseleave效果
+        autoUpload: false, // boolean值，为true时，选中文件就会上传，false，选中不会立即上传
+        filelistcount: false, // 标识，用来控制手动上传按钮的显示与否
+        filelist: [], // 上传文件列表
+        notifyPromise: Promise.resolve(), // 解决notify重叠问题所需
+        promptContent: '请输入省份名称或拼音', // 向自动提示框组件传递提示信息
+        restaurants: [
+          { 'value': '男' },
+          { 'value': '女' },
+          { 'value': '保密' }
+        ],
+        prvnsList: [
+          { value: '选项1', label: '陕西省', pinyin: 'shanxisheng' },
+          { value: '选项2', label: '北京市', pinyin: 'beijingshi' },
+          { value: '选项3', label: '天津市', pinyin: 'tianjinshi' },
+          { value: '选项4', label: '河北省', pinyin: 'hebeisheng' },
+          { value: '选项5', label: '山西省', pinyin: 'shanxisheng' },
+          { value: '选项6', label: '内蒙古自治区', pinyin: 'neimengguzizhiqu' },
+          { value: '选项7', label: '辽宁省', pinyin: 'liaoningsheng' },
+          { value: '选项8', label: '吉林省', pinyin: 'jilinsheng' },
+          { value: '选项9', label: '黑龙江省', pinyin: 'heilongjiangsheng' },
+          { value: '选项10', label: '上海市', pinyin: 'shanghaishi' },
+          { value: '选项11', label: '江苏省', pinyin: 'jiangsusheng' },
+          { value: '选项12', label: '浙江省', pinyin: 'zhejiangsheng' },
+          { value: '选项13', label: '安徽省', pinyin: 'anhuisheng' },
+          { value: '选项14', label: '福建省', pinyin: 'fujiansheng' },
+          { value: '选项15', label: '江西省', pinyin: 'jiangxisheng' },
+          { value: '选项16', label: '山东省', pinyin: 'shandongsheng' },
+          { value: '选项17', label: '河南省', pinyin: 'henansheng' },
+          { value: '选项18', label: '湖北省', pinyin: 'hubeisheng' },
+          { value: '选项19', label: '湖南省', pinyin: 'hunansheng' },
+          { value: '选项20', label: '广东省', pinyin: 'guangdongsheng' },
+          { value: '选项21', label: '广西壮族自治区', pinyin: 'guangxizhuangzuzizhiqu' },
+          { value: '选项22', label: '海南省', pinyin: 'hainansheng' },
+          { value: '选项23', label: '四川省', pinyin: 'sichuansheng' },
+          { value: '选项24', label: '贵州省', pinyin: 'guizhousheng' },
+          { value: '选项25', label: '云南省', pinyin: 'yunnansheng' },
+          { value: '选项26', label: '西藏自治区', pinyin: 'xizangzizhiqu' },
+          { value: '选项27', label: '甘肃省', pinyin: 'gansusheng' },
+          { value: '选项28', label: '青海省', pinyin: 'qinghaisheng' },
+          { value: '选项29', label: '宁夏回族自治区', pinyin: 'ningxiahuizuzizhiqu' },
+          { value: '选项30', label: '新疆维吾尔自治区', pinyin: 'xinjiangweiwuerzuzizhiqu' },
+          { value: '选项31', label: '重庆市', pinyin: 'chongqingshi' }
+        ],
+        // 下拉框遍历对象
+        optionsSelect: [
+          { value: '选项1', label: '苹果' },
+          { value: '选项2', label: '香蕉' },
+          { value: '选项3', label: '橘子' },
+          { value: '选项4', label: '凤梨' }
+        ],
+        // 时间选择器时间设置
+        timeOptions: {
+          start: '00:00', // 开始
+          step: '00:30', // 间隔
+          end: '23:59' // 结束
+        },
+        form: {
+          notnecessaryItem: '', // 非必填
+          necessaryItem: '', // 必填
+          password: '', // 密码,必填
+          textareaValue: '', // 文本域内容
+          iconInput1: '', // 引入icon的输入框value(iconInput1/2/3/4)
+          iconInput2: '',
+          iconInput3: '',
+          iconInput4: '',
+          compositeInput1: '', // 复合型输入框value(compositeInput1/2/3)
+          compositeInput2: '',
+          compositeInput3: '',
+          mustnum: 50, // 数字输入框value
+          combobox: '', // 组合框value
+          selectOne: '选项1', // 下拉选择框value(单选),长度为1的
+          selectMore: [], // 下拉多选框value（多选）
+          time: '', // 时间选择--时间
+          date: '', // 日期选择--日期
+          dateAndTime: '', // 日期和时间选择--日期+时间
+          rateValue: null, // 星级选择(number类型)
+          switchValue: true, // 开关选择
+          radio: '1', // 单选，默认选中label=1
+          checklist: ['A'], // 复选框多选，默认选中label=A
+          capsValue: '', // 大写状态提示框value
+          prvns: [], // 联想输入框内容
+          personSelected: [] // 人员选择机构选中的人员列表
+        },
+        rules: {
+          // 必填项，验证
+          necessaryItem: [
+            {
+              required: true,
+              message: '内容不能为空!',
+              trigger: 'blur'
+            }
+          ],
+          // 大小写框value
+          capsValue: [
+            {
+              required: true,
+              message: '内容不能为空!',
+              trigger: 'blur'
+            }
+          ],
+          // 密码，验证
+          password: [
+            {
+              required: true,
+              message: '内容不能为空!',
+              trigger: 'blur'
+            },
+            {
+              min: 5,
+              max: 8,
+              message: '密码长度为5到8!'
+            }
+          ],
+          // icon输入框，验证
+          iconInput1: [
+            {
+              required: true,
+              message: '内容不能为空!',
+              trigger: 'blur'
+            }
+          ],
+          // 下拉菜单单选验证
+          selectOne: [
+            {
+              required: true,
+              message: '内容不能为空!',
+              trigger: ['blur', 'change']
+            }
+          ],
+          // 日期和时间
+          dateAndTime: [
+            {
+              required: true,
+              message: '内容不能为空!',
+              trigger: 'blur'
+            }
+          ]
+        }
+      }
+    },
+
+    watch: {
+      // 监听上传列表，如果上传列表数量>已上传列表数量，显示手动上传按钮，否则隐藏按钮
+      filelist() {
+        if (this.filelist.length === 0) {
+          this.filelistcount = false
+        } else {
+          if (this.filelist.length >= this.uploadedFiles.length) {
+            this.filelistcount = true
+          } else {
+            this.filelistcount = false
+          }
+        }
+      }
+    },
+    async mounted() {
+      this.allLoadData1 = await this.getAllRemoteStaffData1()
+      this.allLoadData2 = await this.getAllRemoteStaffData2()
+    },
+    methods: {
+      // 组合框方法
+      querySearch(queryString, cb) {
+        var restaurants = this.restaurants
+        var results = queryString ? restaurants : restaurants
+        cb(results)
+      },
+      // 获取联想输入框val
+      getSelectedData(selectedData) {
+        this.form.prvns = selectedData
+      },
+      // 获取大写输入框val
+      getCapsLockVal(val) {
+        this.form.capsValue = val
+      },
+      // 当选中选择文件后，将选中的文件列表添加到filelist
+      filechange(file, filelist) {
+        this.filelist = filelist
+      },
+      // 删除文件
+      fileremove(file, filelist) {
+        var removeExtensionStr = this.getExtensionFileName(file.name)
+        this.filelist = filelist
+        // 判断是否删除的是wps文件
+        if (removeExtensionStr === 'wps') {
+          for (var i = 0; i < this.uploadedFiles.length; i++) {
+            // 判断删除的是否是已上传列表中的文件，如果是，则将已上传文件个数-1
+            if (file.uid === this.uploadedFiles[i].uid) {
+              // 创建一个form实例,请求服务器删除文件
+              var deleteData = new FormData()
+              // 将文件列表添加到实例中
+              deleteData.append('deleteFile', file)
+              uploadform(deleteData).then((res) => {
+                if (res.success) {
+                  UdNotice.success({
+                    title: '成功',
+                    message: '1个文件删除成功',
+                    dangerouslyUseHTMLString: true,
+                    duration: 5000
+                  })
+                  this.removeArray(this.uploadedFiles, file)
+                  this.uploadedCount -= 1
+                } else {
+                  // 上传失败时提示，request失败会有提示框
+                }
+              }).catch(() => { // 删除失败时的提示信息
+                UdNotice.error({
+                  title: '错误',
+                  message: '删除文件失败！',
+                  dangerouslyUseHTMLString: true,
+                  duration: 5000
+                })
+              })
+            } else {
+              // 如果是即将上传列表中的文件，则将未上传列表数-1
+              this.uploadingCount -= 1
+            }
+          }
+        }
+      },
+      // 全量加载
+      async getAllRemoteStaffData1() { // 数据1 tree数据
+        return await getStaffSelectData('/api/allData1').then(res => {
+          return res.data || []
+        })
+      },
+      async getAllRemoteStaffData2(node) { // 数据2 tree数据
+        return await getStaffSelectData('/api/allData2').then(res => {
+          return res.data || []
+        })
+      },
+      // 表单上传成功回调
+      successMessage() {
+        UdNotice.success({
+          title: '成功',
+          message: '文件上传成功',
+          dangerouslyUseHTMLString: true,
+          duration: 5000
+        })
+      },
+      // 上传失败回调
+      errorMessage() {
+        // UdNotice.error({
+        //   title:"错误",
+        //   message:"文件上传失败",
+        //   dangerouslyUseHTMLString:true,
+        //   duration:5000
+        // })
+      },
+      // 手动上传
+      handUpload() {
+        // 获取非wps文件对象
+        for (var i = 0; i < this.filelist.length; i++) {
+          const filename = this.filelist[i].name
+          const extensionStr = this.getExtensionFileName(filename)
+          const msg = filename + '错误：只支持.wps文件'
+          if (extensionStr !== 'wps') {
+            this.notify(msg) // 使用重构的提示信息框，解决信息框重叠问题
+            this.arr.push(this.filelist[i]) // 将非wps文件存储在arr数组中
+          }
+        }
+
+        // 遍历arr,从this.filelist（文件上传列表）移除非wps文件对象
+        for (var j = 0; j < this.arr.length; j++) {
+          this.removeArray(this.filelist, this.arr[j])
+        }
+        this.arr = []
+
+        // 计算即将上传文件的个数（符合条件的wps文件个数）
+        this.uploadingCount = this.filelist.length - this.uploadedCount
+        // 截取新增加的file文件，存放在form中，然后传到服务器
+        var uploadData = this.filelist.slice(this.filelist.length - this.uploadingCount, this.filelist.length)
+        if (this.uploadingCount > 0) {
+          // 创建一个form实例
+          var formData = new FormData()
+          // 将文件列表添加到实例中
+          formData.append('file', uploadData)
+          uploadform(formData).then((res) => {
+            if (res.success) {
+              // 获取已经上传的wps文件个数（上传成功的wps文件个数）
+              this.uploadedCount = this.filelist.length
+              // 获取已经上传成功的wps文件数组对象
+              this.uploadedFiles = this.filelist
+              UdNotice.success({
+                title: '成功',
+                message: this.uploadingCount + '个文件上传成功',
+                dangerouslyUseHTMLString: true,
+                duration: 5000
+              })
+              // 页面获取页面的已上传元素标签（注：getElementsByClassName不支持IE9以下浏览器）
+              const uploadedList = document.getElementsByClassName('el-upload-list__item is-ready')
+              if (uploadedList.length > 0) {
+                for (var i = 0; i < uploadedList.length; i++) {
+                  uploadedList[i].style.backgroundColor = '#f0fff1'
+                }
+              }
+              this.filelistcount = false
+            } else {
+              // 上传失败时提示，request失败会有提示框（code=404/500...）
+            }
+          }).catch(() => { // 上传失败时的提示信息
+            UdNotice.error({
+              title: '错误',
+              message: '上传文件错误！',
+              dangerouslyUseHTMLString: true,
+              duration: 5000
+            })
+            this.filelist = []
+          })
+        } else {
+          UdNotice.warning({
+            title: '文件为空警告',
+            message: '要上传的文件数量为0',
+            dangerouslyUseHTMLString: true,
+            duration: 5000
+          })
+        }
+      },
+      // 上传之前的检验
+      onBeforeUpload(filelist) {
+
+      },
+      // 重置form,清空form和上传文件列表等项
+      reset() {
+        this.$refs.form.resetFields()
+        this.filelist = []
+        this.form.personSelected = []
+        this.uploadedFiles = []
+        this.uploadedCount = 0
+        this.uploadingCount = 0
+      },
+      // 提交form
+      onSubmit(form) {
+        // 验证表单
+        this.$refs.form.validate(valid => {
+          if (valid) {
+            // 请求接口数据，上传数据
+            uploadform(this.form).then((res) => {
+              if (res.success) {
+                UdNotice.success({
+                  title: '成功',
+                  message: '提交表单成功',
+                  dangerouslyUseHTMLString: true,
+                  duration: 5000
+                })
+                // 上传成功之后，跳转到相应页面，此处跳转到首页
+                this.$router.push('/')
+              } else {
+                // 特别说明：因为request对失败进行了处理，会弹出失败的提示框，故此处失败提示框注释
+                // 上传失败，提示框，不跳转
+                // UdNotice.error({
+                //   title:"错误",
+                //   message:"提交表单失败",
+                //   dangerouslyUseHTMLString:true,
+                //   duration:5000
+                // })
+              }
+            })
+          } else {
+            // 表单检验不通过提示框
+            UdNotice.error({
+              title: '错误',
+              message: '提交检验错误，请检查填写内容！',
+              dangerouslyUseHTMLString: true,
+              duration: 5000
+            })
+          }
+        })
+      },
+      // 获取文件后缀名方法
+      getExtensionFileName(filename) {
+        const extensionArr = filename.split('.')
+        return extensionArr[extensionArr.length - 1]
+      },
+      // 从_arr数组对象中移除_obj对象
+      removeArray(_arr, _obj) {
+        var length = _arr.length
+        for (var i = 0; i < length; i++) {
+          if (_arr[i] === _obj) {
+            if (i === 0) {
+              _arr.shift()
+              return _arr
+            } else if (i === length - 1) {
+              _arr.pop()
+              return _arr
+            } else {
+              _arr.splice(i, 1)
+              return _arr
+            }
+          }
+        }
+      },
+      // 解决notify提示框重叠问题
+      notify(msg) {
+        this.notifyPromise = this.notifyPromise.then(this.$nextTick).then(() => {
+          UdNotice.error({
+            title: '错误',
+            message: msg,
+            dangerouslyUseHTMLString: true,
+            duration: 5000
+          })
+        })
+      }
+    }
+  }
+</script>
+
+<style lang="scss">
+  .fontSize12 .ud-form .el-form-item__error--inline {
+    top: -2px;
+  }
+
+  .fontSize15 .ud-form .el-form-item__error--inline,
+  .fontSize18 .ud-form .el-form-item__error--inline {
+    top: -5px;
+  }
+
+  .ud-form {
+    font-weight: 500;
+
+    .ud-form-desc {
+      margin: 0 auto;
+      width: 100%;
+      height: 80px;
+      text-align: center;
+
+      .title {
+        margin: 20px 0 10px;
+        color: #555;
+        font-weight: 600;
+      }
+
+      .description {
+        padding: 0px 0px 10px;
+        color: #999;
+      }
+    }
+
+    .ud-form-content {
+      .el-form-item {
+
+        //select多选选择之后的样式，解决在IE下选项多超过input框的宽度时不换行的Bug
+        .el-select__tags {
+          width: 100%;
+          display: block;
+        }
+
+        //select可搜索时，输入的搜索文字的样式,如果不设置width，在ie下会出现很窄看不见文字的bug
+        .el-select__input {
+          width: 55px !important;
+        }
+
+        //设置input宽度
+        .unified-style {
+          width: 100%;
+        }
+
+        .el-rate {
+          line-height: 1.7;
+        }
+
+        .el-switch {
+          margin-bottom: 5px;
+        }
+
+        // 为input三种不同规格和textarea设置继承父级字体，改变全局字体大小
+        .el-input--small,
+        .el-input--medium,
+        .el-input--mini,
+        .el-textarea,
+        .el-form-item__error,
+        .el-tag {
+          font-weight: 500;
+        }
+
+        .prvns {
+          width: 100%;
+        }
+      }
+
+      .el-form-item__error {
+        background-color: #fdedeb;
+        padding: 5px 15px;
+      }
+
+      .el-form-item__error--inline {
+        margin-left: 0;
+      }
+
+      .el-form-item__label {
+        color: #333;
+        font-weight: 500;
+      }
+
+      .data-source-wrap {
+        margin-bottom: 12px;
+      }
+
+      .staff-select {
+        width: 100%;
+      }
+
+      .ud-form-button {
+        float: right;
+        margin-right: 10px;
+      }
+    }
+  }
+
+  .uploadstyle {
+    border: 1px solid #dcdfe6;
+    background-color: #f5f7fa;
+    padding: 5px;
+  }
+
+  .el-upload-list {
+    .el-upload-list__item {
+      margin-top: 0;
+      padding: 3px 0;
+      border-top: 1px solid #ededed;
+
+      .el-icon-close {
+        top: 9px;
+      }
+    }
+
+    li {
+      &:nth-of-type(odd) {
+        background-color: #fff;
+      }
+    }
+  }
+</style>

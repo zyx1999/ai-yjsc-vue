@@ -1,0 +1,30 @@
+import request from '@/utils/request'
+
+export function getAllData(query) {
+  return request({
+    url: `/{{timestamp}}/tree/allData`,
+    method: 'get',
+    params: query
+  })
+}
+export function getData(id) {
+  return request({
+    url: `/{{timestamp}}/tree/Data`,
+    method: 'get',
+    params: { id }
+  })
+}
+export function createData(id) {
+  return request({
+    url: `/{{timestamp}}/tree/create`,
+    method: 'post',
+    params: { id }
+  })
+}
+export function saveData(params) {
+  return request({
+    url: `/{{timestamp}}/tree/save`,
+    method: 'post',
+    params: params
+  })
+}

@@ -1,0 +1,764 @@
+<template>
+  <div class="app-container">
+    <!--查询区 -->
+    <div class="filter-container">
+      <el-row>
+        <!-- 根据标题 -->
+        <el-col :span="8">
+          <el-input
+            v-model="listQuery.title"
+            placeholder="标题"
+            class="filter-item"
+            @keyup.enter.native="getInfo"
+          />
+        </el-col>
+
+        <!-- 根据重要性 -->
+        <el-col :span="8">
+          <el-select
+            v-model="listQuery.importance"
+            placeholder="重要性"
+            clearable
+            class="filter-item"
+          >
+            <el-option
+              v-for="item in importanceOptions"
+              :key="item"
+              :label="item"
+              :value="item"
+            />
+          </el-select>
+        </el-col>
+      </el-row>
+      <el-row>
+        <!-- 根据语言类型 -->
+        <el-col :span="8">
+          <el-select
+            v-model="listQuery.type"
+            placeholder="类型"
+            clearable
+            class="filter-item"
+          >
+            <el-option
+              v-for="item in typeOptions"
+              :key="item.key"
+              :label="item.display_name+'('+item.key+')'"
+              :value="item.key"
+            />
+          </el-select>
+        </el-col>
+        <!-- 排列顺序 -->
+        <el-col :span="8">
+          <el-select
+            v-model="listQuery.sort"
+            class="filter-item"
+            @change="getInfo"
+          >
+            <el-option
+              v-for="item in sortOptions"
+              :key="item.key"
+              :label="item.label"
+              :value="item.key"
+            />
+          </el-select>
+        </el-col>
+      </el-row>
+
+      <el-row type="flex" justify="end">
+        <el-col :span="8">
+          <el-button
+            v-waves
+            class="filter-item"
+            type="primary"
+            icon="el-icon-search"
+            @click="getInfo"
+          >
+            查询
+          </el-button>
+          <el-button
+            v-waves
+            class="filter-item"
+            type="primary"
+            icon="el-icon-refresh"
+            style="margin-left: 5px !important;"
+            @click="reset"
+          >
+            重置
+          </el-button>
+
+        </el-col>
+      </el-row>
+    </div>
+    <hr style="background:#e0e0e0;height:1px;border:none">
+
+    <!-- 表格区 -->
+    <template>
+      <div id="tableShadow">
+        <el-row type="flex">
+          <el-col :span="24">
+            <!-- 添加信息 -->
+            <el-button
+              type="primary"
+              class="buttonMargin"
+              @click="createInfo"
+            >
+              添加
+            </el-button>
+            <!-- 编辑信息 -->
+            <el-button
+              type="primary"
+              class="buttonMargin"
+              @click="updateInfo"
+            >
+              编辑
+            </el-button>
+
+            <!-- 删除信息 -->
+            <el-button
+              type="danger"
+              class="buttonMargin"
+              @click="deletedInfo"
+            >
+              删除
+            </el-button>
+            <el-button
+              type="primary"
+              class="buttonMargin"
+              @click="exportExcelSingle"
+            >
+              导出当前页为Excel
+            </el-button>
+            <el-button
+              type="primary"
+              class="buttonMargin"
+              @click="exportExcelAll"
+            >
+              导出全部数据为Excel
+            </el-button>
+            <el-button
+              type="primary"
+              class="buttonMargin"
+              @click="exportPDF"
+            >
+              导出当前页为PDF
+            </el-button>
+
+          </el-col>
+        </el-row>
+        <div id="content" style="padding:10px">
+          <el-table
+
+            ref="multipleTable"
+            :key="tableKey"
+            v-loading="listLoading"
+            :data="list"
+            border
+            fit
+            stripe
+            highlight-current-row
+            style="width: 100%;"
+            @sort-change="sortChange"
+            @selection-change="selectChange"
+          >
+            <el-table-column
+              type="selection"
+              width="40"
+            />
+            <!-- id -->
+            <el-table-column
+              label="序号"
+              prop="id"
+              fixed
+              sortable="custom"
+              align="center"
+              width="100"
+            >
+              <template slot-scope="scope">
+                <span>\{{ scope.row.id }}</span>
+              </template>
+            </el-table-column>
+            <!-- 时间 -->
+            <el-table-column
+              label="时间"
+              min-width="180"
+              align="center"
+              fixed
+            >
+              <template slot-scope="scope">
+                <span>\{{ scope.row.timestamp |parseTime() }}</span>
+              </template>
+            </el-table-column>
+            <!-- 标题 -->
+            <el-table-column
+              label="标题"
+              min-width="450px"
+              align="center"
+              fixed
+              class-name="whiteSpace"
+            >
+              <template slot-scope="{row}">
+                <span>\{{ row.title }}</span>
+                <el-tag>\{{ row.type | typeFilter }}</el-tag>
+              </template>
+            </el-table-column>
+            <!-- 作者 -->
+            <el-table-column
+              label="作者"
+              width="100px"
+              align="center"
+            >
+              <template slot-scope="scope">
+                <span>\{{ scope.row.author }}</span>
+              </template>
+            </el-table-column>
+
+            <!-- 重要性 -->
+            <el-table-column
+              label="重要性"
+              width="80px"
+              align="center"
+            >
+              <template slot-scope="scope">
+                <svg-icon
+                  v-for="n in +scope.row.importance"
+                  :key="n"
+                  icon-class="star"
+                  class="meta-item__icon"
+                  style="color:#ff5050"
+                />
+              </template>
+            </el-table-column>
+
+            <!-- 阅读量 -->
+            <el-table-column
+              label="阅读数"
+              align="center"
+              width="95"
+            >
+              <template slot-scope="{row}">
+                <span v-if="row.pageviews">\{{ row.pageviews }}</span>
+                <span v-else>0</span>
+              </template>
+            </el-table-column>
+
+            <!-- 审核人 -->
+            <el-table-column
+              label="审核人"
+              width="110px"
+              align="center"
+            >
+              <template slot-scope="scope">
+                <span>\{{ scope.row.reviewer }}</span>
+              </template>
+            </el-table-column>
+
+          </el-table>
+        </div>
+      </div>
+    </template>
+    <!-- 分页 -->
+    <pagination
+      v-show="total>0"
+      :total="total"
+      :page.sync="listQuery.page"
+      :limit.sync="listQuery.limit"
+      @pagination="getList"
+    />
+
+    <!-- 添加或修改时的弹窗 -->
+    <el-dialog
+      :title="textMap[dialogStatus]"
+      :visible.sync="dialogFormVisible"
+    >
+      <el-form
+        ref="dataForm"
+        :rules="rules"
+        :model="temp"
+        label-position="right"
+        class="ud-dialog-form"
+        label-width="15%"
+        :inline-message="true"
+        style="width: 100%; padding:0 50px;"
+      >
+        <el-form-item
+          label="类型"
+          prop="type"
+        >
+          <el-select
+            v-model="temp.type"
+            class="filter-item"
+          >
+            <el-option
+              v-for="item in typeOptions"
+              :key="item.key"
+              :label="item.display_name"
+              :value="item.key"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item
+          label="时间"
+          prop="timestamp"
+        >
+          <el-date-picker
+            v-model="temp.timestamp"
+            type="datetime"
+          />
+        </el-form-item>
+
+        <el-form-item
+          label="标题"
+          prop="title"
+        >
+          <el-input
+            v-model="temp.title"
+          />
+        </el-form-item>
+
+        <el-form-item label="重要性">
+          <el-rate
+            v-model="temp.importance"
+            :colors="['#99A9BF', '#F7BA2A', '#ff5050']"
+            :max="3"
+            style="margin-top:8px;"
+          />
+        </el-form-item>
+
+        <el-form-item label="点评">
+          <el-input
+            v-model="temp.remark"
+            :autosize="{ minRows: 2, maxRows: 4}"
+            type="textarea"
+          />
+        </el-form-item>
+      </el-form>
+
+      <div slot="footer" class="dialog-footer">
+        <el-button
+          type="primary"
+          @click="dialogFormVisible = false"
+        >
+          取 消
+        </el-button>
+        <el-button
+          type="primary"
+          @click="dialogStatus==='create'?createData():updateData()"
+        >
+          确 定
+        </el-button>
+      </div>
+    </el-dialog>
+
+  </div>
+</template>
+
+<script>
+import { fetchList, createArticle, updateArticle } from '@/api/article_table{{timestamp}}'
+import waves from '@/directive/waves'
+import Pagination from '@/components/Pagination'
+import ExportExcel from '@/vendor/Export2Excel'
+import ExportPDF from '@/vendor/ExportPDF'
+import { setTimeout } from 'timers'
+import { UdNotice } from 'udesk-vue'
+
+// 语言类型数组
+const typeOptions = [
+  { key: 'CN', display_name: 'China' },
+  { key: 'US', display_name: 'USA' },
+  { key: 'JP', display_name: 'Japan' },
+  { key: 'EU', display_name: 'Eurozone' }
+]
+
+// 遍历数组，将数据以 CN：China 的格式存储在对象中
+const typeObject = typeOptions.reduce((acc, cur) => {
+  acc[cur.key] = cur.display_name
+  return acc
+}, {})
+
+export default {
+  name: 'PopupTable',
+  components: { Pagination },
+  directives: { waves },
+  filters: {
+    typeFilter(type) {
+      return typeObject[type]
+    }
+  },
+  data() {
+    return {
+      tableKey: 0,
+      list: null,
+      listAll: null,
+      total: 0,
+      listLoading: true,
+      listQuery: {
+        page: 1,
+        limit: 20,
+        importance: undefined,
+        title: undefined,
+        type: undefined,
+        sort: '+id'
+      },
+      listAllQuery: {
+        page: 1,
+        limit: 20,
+        importance: undefined,
+        title: undefined,
+        type: undefined,
+        sort: '+id'
+      },
+      importanceOptions: [1, 2, 3],
+      typeOptions,
+      sortOptions: [
+        { label: 'ID Ascending', key: '+id' },
+        { label: 'ID Descending', key: '-id' }
+      ],
+
+      showReviewer: false,
+      temp: {
+        id: undefined,
+        importance: 1,
+        remark: '',
+        timestamp: new Date(),
+        title: '',
+        type: ''
+      },
+      dialogFormVisible: false,
+      dialogStatus: '',
+      textMap: {
+        update: '编辑',
+        create: '添加'
+      },
+      rules: {
+        type: [
+          {
+            required: true,
+            message: '请选择类型',
+            trigger: 'change'
+          }
+        ],
+        timestamp: [
+          {
+            type: 'date',
+            required: true,
+            message: '请选择相应的时间',
+            trigger: 'change'
+          }
+        ],
+        title: [
+          {
+            required: true,
+            message: '请填写标题',
+            trigger: 'blur'
+          }
+        ]
+      },
+      downloadLoading: false,
+      selected: [] // 已选项集合
+    }
+  },
+  created() {
+    this.getList()
+  },
+  methods: {
+    getList() {
+      this.listLoading = true
+      fetchList(this.listQuery).then(response => {
+        this.list = response.data.items
+        this.total = response.data.total
+        setTimeout(() => {
+          this.listLoading = false
+          this.getListAll()
+        }, 1500)
+      })
+    },
+    getListAll() {
+      this.listLoading = true
+      this.listAllQuery.limit = this.total
+      fetchList(this.listAllQuery).then(response => {
+        this.listAll = response.data.items
+        setTimeout(() => {
+          this.listLoading = false
+        }, 1500)
+      })
+    },
+    getInfo() {
+      this.listQuery.page = 1
+      this.getList()
+    },
+    // 重置搜索信息
+    reset() {
+      this.listQuery = {
+        page: 1,
+        limit: 20,
+        importance: undefined,
+        title: undefined,
+        type: undefined,
+        sort: '+id'
+      }
+    },
+    // 排序发生变化时执行
+    sortChange(data) {
+      const { prop, order } = data
+      if (prop === 'id') {
+        this.sortByID(order)
+      }
+    },
+    sortByID(order) {
+      if (order === 'ascending') {
+        this.listQuery.sort = '+id'
+      } else {
+        this.listQuery.sort = '-id'
+      }
+      this.getInfo()
+    },
+    // 选项发生变化时执行
+    selectChange(data) {
+      this.selected = data
+    },
+    resetTemp() {
+      this.temp = {
+        id: undefined,
+        importance: 1,
+        remark: '',
+        timestamp: new Date(),
+        title: '',
+        type: ''
+      }
+    },
+    createInfo() {
+      this.resetTemp()
+      this.dialogStatus = 'create'
+      this.dialogFormVisible = true
+      this.$nextTick(() => {
+        this.$refs['dataForm'].clearValidate()
+      })
+    },
+    createData() {
+      this.$refs['dataForm'].validate((valid) => {
+        if (valid) {
+          this.temp.id = this.total + 1
+          this.temp.author = 'vue-element-admin'
+          this.temp.reviewer = '未审核'
+          this.temp.timestamp = new Date()
+          createArticle(this.temp).then(() => {
+            this.list.unshift(this.temp)
+            this.dialogFormVisible = false
+            UdNotice({
+              noticeType: 'message',
+              type: 'success',
+              message: '创建成功',
+              duration: 5000
+            })
+          })
+        }
+      })
+    },
+    updateInfo() {
+      if (this.selected.length) {
+        if (this.selected.length > 1) {
+          UdNotice({
+            noticeType: 'message',
+            type: 'warning',
+            message: '每次只能选择一条记录',
+            duration: 5000
+          })
+        } else {
+          this.temp = Object.assign({}, this.selected[0])
+          this.temp.timestamp = new Date(this.temp.timestamp)
+
+          this.dialogStatus = 'update'
+          this.dialogFormVisible = true
+          this.$nextTick(() => {
+            this.$refs['dataForm'].clearValidate()
+          })
+        }
+      } else {
+        UdNotice({
+          noticeType: 'message',
+          type: 'warning',
+          message: '请选择要编辑的项',
+          duration: 5000
+        })
+      }
+    },
+    updateData() {
+      this.$refs['dataForm'].validate((valid) => {
+        if (valid) {
+          const tempData = Object.assign({}, this.temp)
+          tempData.timestamp = +new Date(tempData.timestamp)
+
+          updateArticle(tempData).then(() => {
+            for (const v of this.list) {
+              if (v.id === this.temp.id) {
+                const index = this.list.indexOf(v)
+                this.list.splice(index, 1, this.temp)
+                break
+              }
+            }
+            this.dialogFormVisible = false
+            UdNotice({
+              noticeType: 'message',
+              type: 'success',
+              message: '更新成功',
+              duration: 5000
+            })
+          })
+        }
+      })
+    },
+    deletedInfo() {
+      if (this.selected.length) {
+        this.$confirm('确定删除选择项？', '提示', {
+          confirmButtonText: '确定',
+
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          for (let i = 0; i < this.selected.length; i++) {
+            const index = this.list.indexOf(this.selected[i])
+            this.list.splice(index, 1)
+          }
+          UdNotice({
+            noticeType: 'message',
+            type: 'success',
+            message: '删除成功',
+            duration: 5000
+          })
+        }).catch(() => {
+          UdNotice({
+            noticeType: 'message',
+            type: 'info',
+            message: '取消删除',
+            duration: 5000
+          })
+        })
+      } else {
+        UdNotice({
+          noticeType: 'message',
+          type: 'warning',
+          message: '请选择一条记录',
+          duration: 5000
+        })
+      }
+    },
+    parseTime(time, cFormat) {
+      if (arguments.length === 0) {
+        return null
+      }
+      const format = cFormat || '{y}-{m}-{d} {h}:{i}:{s}'
+      let date
+      if (typeof time === 'object') {
+        date = time
+      } else {
+        if ((typeof time === 'string') && (/^[0-9]+$/.test(time))) {
+          time = parseInt(time)
+        }
+        if ((typeof time === 'number') && (time.toString().length === 10)) {
+          time = time * 1000
+        }
+        date = new Date(time)
+      }
+      const formatObj = {
+        y: date.getFullYear(),
+        m: date.getMonth() + 1,
+        d: date.getDate(),
+        h: date.getHours(),
+        i: date.getMinutes(),
+        s: date.getSeconds(),
+        a: date.getDay()
+      }
+      const time_str = format.replace(/{(y|m|d|h|i|s|a)+}/g, (result, key) => {
+        let value = formatObj[key]
+        // Note: getDay() returns 0 on Sunday
+        if (key === 'a') { return ['日', '一', '二', '三', '四', '五', '六'][value ] }
+        if (result.length > 0 && value < 10) {
+          value = '0' + value
+        }
+        return value || 0
+      })
+      return time_str
+    },
+    exportExcelSingle() {
+      this.exportExcel(this.list)
+    },
+    exportExcelAll() {
+      this.exportExcel(this.listAll)
+    },
+    exportExcel(list) {
+      this.downloadLoading = true
+
+      const tHeader = ['时间', '标题', '类型', '重要性', '作者', '阅读量', '审核人']
+      const filterVal = ['timestamp', 'title', 'type', 'importance', 'author', 'pageviews', 'reviewer']
+      const data = this.formatJson(filterVal, list)
+      ExportExcel.export_json_to_excel({
+        header: tHeader,
+        data,
+        filename: 'table-list'
+      })
+      this.downloadLoading = false
+    },
+    formatJson(filterVal, jsonData) {
+      return jsonData.map(v => filterVal.map(j => {
+        if (j === 'timestamp') {
+          return this.parseTime(v[j])
+        } else {
+          return v[j]
+        }
+      }))
+    },
+    formatJsons(filterVal, jsonData) {
+      return jsonData.map(v => {
+        const obj = {}
+        filterVal.map(j => {
+          if (j === 'timestamp') {
+            obj[j] = this.parseTime(v[j])
+          } else {
+            obj[j] = v[j]
+          }
+        })
+        return obj
+      })
+    },
+    exportPDF() {
+      ExportPDF.downPDF(document.getElementById('content'), 'pdf文件', '20') // 弊端：参数必须都有 (要截取的元素，文件名，边距)
+    },
+    // 全量导出PDF，因为html2canvas是基于当前页面的数据生成图片，所以先加载所有的数据到当前页面，
+    // 因为要对页面中的图标进行替换，所以要colne要复制的页面元素，导出clone后的页面并删除，恢复当前页面的数据个数，导致页面导出很慢
+    // bug:导出所有数据致使图片过长进行分页，导致有的时候页面中的数据会被截断在上下页中
+    exportAllPDF() {
+      var that = this
+      this.list = this.listAll
+      setTimeout(function() {
+        ExportPDF.downPDF(document.getElementById('content'), 'pdf文件', '20')
+        that.getList()
+      }, 500)
+    }
+  }
+}
+</script>
+<style lang="scss" scoped>
+    .filter-container{
+        .el-row{
+            .el-col{
+                display:flex;
+                justify-content: flex-end;
+                align-items: center;
+                .el-input,.el-select{
+                    width: 90%;
+                }
+            }
+        }
+    }
+    .ud-dialog-form {
+      .el-input,.el-select,.el-textarea {
+        width: 90%;
+      }
+    }
+    .buttonMargin{
+      margin-bottom:10px;
+    }
+
+</style>
+

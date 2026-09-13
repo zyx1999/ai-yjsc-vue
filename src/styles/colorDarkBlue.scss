@@ -1,0 +1,14 @@
+$color : #14589f;
+$colorWhite:#ffffff;
+
+.colorDarkBlue{
+    .bank-header{
+        background: $color !important;
+        .mint-button i{
+            color: $colorWhite !important;
+        }
+        .mint-header-title {
+            color: $colorWhite !important;
+        }
+    }
+}

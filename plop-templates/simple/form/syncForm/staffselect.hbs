@@ -1,0 +1,10 @@
+import request from '@/utils/request'
+
+// 获取人员选择组件数据——刘雪蕊
+export function getStaffSelectData(url, params) {
+  return request({
+    url,
+    method: 'get',
+    params
+  })
+}

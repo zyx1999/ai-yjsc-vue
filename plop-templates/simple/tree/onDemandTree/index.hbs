@@ -1,0 +1,538 @@
+<template>
+  <div class="ud-tree">
+    <div class="treeTitle">
+      <h3>树形视图按需加载样例</h3>
+
+    </div>
+    <div class="treeContent">
+      <div class="treeLeft">
+        <el-card>
+          <div slot="header" class="cardHeader">
+            <span>机构树</span>
+          </div>
+          <div>
+            <el-tree
+              ref="tree"
+              :data="reData"
+              draggable
+              props="defaultData"
+              node-key="id"
+              show-checkbox
+              highlight-current
+              :allow-drop="allowDrop"
+              :default-expanded-keys="expandedKeys"
+              @node-click="nodeClick"
+            />
+          </div>
+        </el-card>
+      </div>
+      <div class="treeRight" :style="{display:show}">
+        <div class="treeTop">
+          <el-card>
+            <div slot="header" class="cardHeader">
+              <span>机构信息</span>
+            </div>
+            <div>
+              <el-form
+                label-position="right"
+                label-width="30%"
+                :model="dataInfo"
+              >
+                <el-row>
+                  <el-col :span="12">
+                    <el-form-item label="机构编号">
+                      <el-input v-model="dataInfo.id" disabled />
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="机构名">
+                      <el-input v-model="dataInfo.label" />
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+
+                <el-row>
+                  <el-col :span="12">
+                    <el-form-item label="顺序号">
+                      <el-input v-model="dataInfo.num" />
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="父机构">
+                      <el-input v-model="dataInfo.preLabel" disabled />
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+                <el-row>
+                  <el-col :span="12">
+                    <el-form-item label="路径名">
+                      <el-input v-model="dataInfo.routeName" />
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="路径ID">
+                      <el-input v-model="dataInfo.routeId" />
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+                <el-row>
+                  <el-col :span="12">
+                    <el-form-item label="状态">
+                      <el-input v-model="dataInfo.state" disabled />
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="描述">
+                      <el-input v-model="dataInfo.descrip" value="3" />
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+                <el-row type="flex" justify="end">
+                  <el-col :span="1">
+                    <el-button type="primary" @click="save">保存</el-button>
+                  </el-col>
+                </el-row>
+              </el-form>
+            </div>
+          </el-card>
+        </div>
+        <div class="treeBottom">
+          <el-card>
+            <div slot="header" class="cardHeader">
+              <span>子机构信息</span>
+            </div>
+            <div>
+              <el-row
+                style="marginBottom:10px"
+              >
+                <el-col :span="12">
+                  <template v-if="isAdd">
+                    <el-button type="primary" @click="sure">确定</el-button>
+                    <el-button type="danger" @click="cancel">取消</el-button>
+                  </template>
+                  <template v-else>
+                    <el-button type="primary" @click="addOrgan">新增机构</el-button>
+                    <el-button type="danger" @click="deleteOrgan">删除机构</el-button>
+                  </template>
+                </el-col>
+              </el-row>
+              <el-table
+                ref="multipleTable"
+                :data="tableData"
+                border
+                stripe
+                row-key="id"
+                @selection-change="selectChange"
+              >
+                <el-table-column type="selection" />
+                <el-table-column
+                  label="机构编号"
+                  align="center"
+                >
+                  <template slot-scope="scope">
+                    <span> \{{ scope.row.id }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  label="机构名"
+                  align="center"
+                >
+                  <template slot-scope="scope">
+                    <el-input v-if="scope.row.edit" v-model="scope.row.label" />
+                    <span v-else> \{{ scope.row.label }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  label="顺序号"
+                  align="center"
+                >
+                  <template slot-scope="scope">
+                    <el-input v-if="scope.row.edit" v-model="scope.row.num" />
+                    <span v-else>\{{ scope.row.num }}</span>
+
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  label="父机构"
+                  align="center"
+                >
+                  <template slot-scope="scope">
+                    \{{ scope.row.preLabel }}
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  label="路径名"
+                  align="center"
+                >
+                  <template slot-scope="scope">
+                    <el-input v-if="scope.row.edit" v-model="scope.row.routeName" />
+                    <span v-else> \{{ scope.row.routeName }}</span>
+
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  label="路径ID"
+                  align="center"
+                >
+                  <template slot-scope="scope">
+                    <el-input v-if="scope.row.edit" v-model="scope.row.routeId" />
+                    <span v-else> \{{ scope.row.routeId }}</span>
+
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  label="状态"
+                  align="center"
+                >
+                  <template slot-scope="scope">
+                    <el-input v-if="scope.row.edit" v-model="scope.row.state" />
+                    <span v-else>  \{{ scope.row.state }}</span>
+
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  label="描述"
+                  align="center"
+                >
+                  <template slot-scope="scope">
+                    <el-input v-if="scope.row.edit" v-model="scope.row.descrip" />
+                    <span v-else>\{{ scope.row.descrip }}</span>
+                  </template>
+                </el-table-column>
+              </el-table>
+
+            </div>
+          </el-card>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</template>
+<script>
+
+import { getData, createData, saveData } from '@/api/tree_getData{{timestamp}}.js'
+import { UdNotice } from 'udesk-vue'
+
+export default {
+  name: 'OnDemandTree',
+  data() {
+    return {
+      reData: [],
+      expandedKeys: [0],
+      defaultData: {
+        label: 'label',
+        children: 'children'
+      },
+      total: 2,
+      listQuery: {
+        page: 1,
+        limit: 5
+      },
+      dataInfo: { // 节点详情信息
+        num: '',
+        label: '',
+        id: '',
+        preLabel: '',
+        routeName: '',
+        routeId: '',
+        state: '',
+        descrip: '',
+        edit: false,
+        expanded: false,
+        children: []
+      },
+      addData: '', // 添加的节点
+      parentId: '', // 暂存父节点的ID
+      isAdd: false,
+      selected: [], // 多选集合
+      result: [], // 储存节点及子节点,防止第一次加载完之后多次点击导致重复加载请求数据
+      tableData: [], // 储存子节点
+      show: false // 是否显示节点详情
+    }
+  },
+  mounted() {
+    this.reData = [
+      { // 根节点
+        num: '',
+        label: '根节点',
+        id: 0,
+        preLabel: '',
+        routeName: '',
+        routeId: '',
+        state: '',
+        descrip: '',
+        edit: false,
+        expanded: true,
+        children: []
+      }
+    ]
+    this.result = [{ id: undefined, result: [{ // 根节点
+      num: '',
+      label: '根节点',
+      id: 0,
+      preLabel: '',
+      routeName: '',
+      routeId: '',
+      state: '',
+      descrip: '',
+      edit: false,
+      expanded: true,
+      children: []
+    }] }]
+  },
+  methods: {
+    // 选项发生变化时执行
+    selectChange(data) {
+      this.selected = data
+    },
+
+    // 获取信息
+    async getNode(id) {
+      return await getData(id).then(res => {
+        this.result.push({ id: id, result: res.data })
+        return res.data || []
+      })
+    },
+    // 展示信息详情
+    showNodes(node, result) {
+      this.tableData = []
+      this.tableData = result.map(item => {
+        const v = Object.assign({}, item)
+        v.children = []
+        return v
+      })
+      if (node.data !== undefined) {
+        this.dataInfo = node.data
+      }
+    },
+    // 点击节点展示节点信息和子节点信息
+    async nodeClick(data, node) {
+      const id = node.data.id
+      let sonNode
+
+      this.isAdd = false
+
+      const sonNodes = this.result.filter((item) => {
+        return item.id === id
+      })
+      if (!sonNodes.length) {
+        sonNode = await this.getNode(id) // 获得node的子节点
+        this.expandedKeys.push(id)
+        this.filter(this.reData, id, sonNode) // 将获得node子节点添加到在this.reData中id对应的节点的children中
+      } else {
+        sonNode = sonNodes[0].result
+      }
+      this.showNodes(node, sonNode)
+    },
+    filter(item, id, sonNode) {
+      for (var i = 0; i < item.length; i++) {
+        if (item[i].children && item[i].children.length > 0) {
+          this.filter(item[i].children, id, sonNode)
+        }
+        if (id === item[i].id) {
+          item[i].children = sonNode // 将获得到的子节点添加到node的children中
+          break
+        }
+      }
+    },
+    // 只能同级拖拽
+    allowDrop(draggingNode, dropNode, type) {
+      if (draggingNode.level === dropNode.level) {
+        if (type === 'inner') {
+          return false
+        } else {
+          return true
+        }
+      } else {
+        return false
+      }
+    },
+    // 保存
+    save() {
+      const param = this.dataInfo
+      if (param.id === '') {
+        UdNotice({
+          noticeType: 'message',
+          type: 'info',
+          message: '请选择需要修改的机构节点',
+          duration: 5000
+        })
+      } else {
+        saveData(param).then(() => {
+          this.result.map((item) => {
+            if (item.id === param.id) {
+              item = param
+            }
+          })
+          UdNotice({
+            noticeType: 'message',
+            type: 'success',
+            message: '保存成功',
+            duration: 5000
+          })
+        })
+      }
+    },
+    // 添加机构
+    addOrgan() {
+      this.isAdd = true
+      const parentId = this.dataInfo.id // 当前点击节点的ID
+      this.parentId = parentId
+      const id = this.tableData.length > 0 ? this.tableData[this.tableData.length - 1].id + 1 : Number(Number(parentId) + '0')
+      this.addData = { // 新增节点的信息
+        num: '',
+        label: '新增机构',
+        id: id,
+        preLabel: parentId,
+        routeName: '',
+        routeId: '',
+        state: '',
+        descrip: '',
+        edit: true,
+        expanded: false,
+        children: []
+      }
+      if (parentId !== undefined) {
+        this.tableData.push(this.addData)
+      } else {
+        // 请选择要添加机构的父机构
+        UdNotice({
+          noticeType: 'message',
+          type: 'info',
+          message: '请选择要添加机构的父机构',
+          duration: 5000
+        })
+      }
+    },
+    // 确定添加
+    sure() {
+      this.isAdd = false
+      this.addData.edit = false
+      const id = this.parentId // 要添加节点的ID
+      createData(id).then(() => {
+        let son = []
+        this.result.map((item) => {
+          if (item.id === id) {
+            item.result.push(this.addData)
+            son = item.result
+          }
+        })
+
+        this.filter(this.reData, id, son)
+        this.parentId = ''
+        UdNotice({
+          noticeType: 'message',
+          type: 'success',
+          message: '添加成功',
+          duration: 5000
+        })
+      })
+    },
+    // 取消添加
+    cancel() {
+      if (this.dataInfo.id === this.parentId) {
+        this.tableData.splice(0, 1)
+      }
+      this.parentId = ''
+      this.isAdd = false
+    },
+    filterDelete(item, id, sonNode) {
+      for (var i = 0; i < item.length; i++) {
+        if (item[i].children && item[i].children.length > 0) {
+          this.filter(item[i].children, id, sonNode)
+        }
+        if (id === item[i].id) {
+          const datas = item[i].children
+          for (let j = 0; j < datas.length; j++) {
+            const num = datas.indexOf(sonNode)
+            item[i].children.splice(num, 1)
+          }
+
+          break
+        }
+      }
+    },
+    // 删除机构
+    deleteOrgan() {
+      const parentId = this.dataInfo.id
+      if (this.selected.length) {
+        this.$confirm('确定删除选择项？', '提示', {
+          confirmButtonText: '确定',
+
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.result.map((item) => {
+            if (item.id === parentId) {
+              for (let i = 0; i < this.selected.length; i++) {
+                const index = this.tableData.indexOf(this.selected[i])
+                this.tableData.splice(index, 1)
+                item.result = item.result.filter(item => {
+                  return item.id !== this.selected[i].id
+                })
+              }
+              this.filter(this.reData, parentId, item.result)
+            }
+          })
+
+          UdNotice({
+            noticeType: 'message',
+            type: 'success',
+            message: '删除成功',
+            duration: 5000
+          })
+        }).catch(() => {
+          UdNotice({
+            noticeType: 'message',
+            type: 'info',
+            message: '取消删除',
+            duration: 5000
+          })
+        })
+      } else {
+        UdNotice({
+          noticeType: 'message',
+          type: 'warning',
+          message: '请选择一条记录',
+          duration: 5000
+        })
+      }
+    }
+  }
+
+}
+</script>
+<style lang="scss" scoped>
+.ud-tree{
+    .treeTitle{
+        text-align: center
+    }
+    .treeContent{
+        display: flex;
+        justify-content: space-between;
+        padding: 10px;
+    }
+    .treeLeft{
+        width:25%;
+        .el-card__header {
+          background:#f4f4f4;
+        }
+
+    }
+    .treeRight{
+
+        width:70%;
+        margin:0 50px;
+        .treeTop{
+          width:100%;
+          margin-bottom: 20px;
+        }
+        .treeBottom{
+          width: 100%;
+        }
+    }
+}
+
+</style>

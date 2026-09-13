@@ -1,0 +1,215 @@
+
+const allData1 = [
+    {
+      id: 0,
+      label: '根节点',
+      expanded: true,
+      children: [{
+        id: 1,
+        label: '一级目录1',
+        expanded: false,
+      },
+      {
+        id: 2,
+        label: '一级目录2',
+        expanded: true,
+        children: [
+          {
+            id: 4,
+            label: '二级目录1',
+            expanded: false,
+            children: [
+              {
+                id: 7,
+                label: '三级目录1',
+                expanded: false,
+              }
+            ]
+          }, {
+            id: 5,
+            label: '二级目录2',
+            expanded: false,
+          }, {
+            id: 6,
+            label: '二级目录3',
+            expanded: false,
+          }
+        ]
+      },
+      {
+        id: 3,
+        label: '一级目录3',
+        expanded: false,
+      }
+      ]
+    }
+  ]
+
+    const rootNode = [
+      {
+        id: 0,
+        label: '根节点',
+        num: '',
+        preLabel: '',
+        routeName: '',
+        routeId: '',
+        state: '',
+        descrip: '',
+        edit: false,
+        expanded: true,
+        children:[]
+      }
+    ]
+  const singleData = [
+      {
+        id: 1,
+        label: '一级目录1',
+        num: '',
+        preLabel: '0',
+        routeName: '',
+        routeId: '',
+        state: '',
+        descrip: '',
+        edit: false,
+        expanded: false,
+        children:[]
+      },
+      {
+        id: 2,
+        label: '一级目录2',
+        num: '',
+        preLabel: '0',
+        routeName: '',
+        routeId: '',
+        state: '',
+        descrip: '',
+        edit: false,
+        expanded: true,
+        children:[]
+      },
+      {
+        id: 3,
+        label: '一级目录3',
+        num: '',
+        preLabel: '0',
+        routeName: '',
+        routeId: '',
+        state: '',
+        descrip: '',
+        edit: false,
+        expanded: false,
+        children:[]
+      }
+     
+  ]
+  const singleData1 = [
+    {
+      id: 21,
+      label: '二级目录1',
+      num: '',
+      preLabel: '2',
+      routeName: '',
+      routeId: '',
+      state: '',
+      descrip: '',
+      edit: false,
+      expanded: false,
+      children:[]
+    }, {
+      id: 22,
+      label: '二级目录2',
+      num: '',
+      preLabel: '2',
+      routeName: '',
+      routeId: '',
+      state: '',
+      descrip: '',
+      edit: false,
+      expanded: false,
+      children:[]
+    }, {
+      id: 23,
+      label: '二级目录3',
+      num: '',
+      preLabel: '2',
+      routeName: '',
+      routeId: '',
+      state: '',
+      descrip: '',
+      edit: false,
+      expanded: false,
+      children:[]
+    }
+  ]
+export default [
+    {
+        url: `/{{timestamp}}/tree/allData`,
+        type: 'get',
+        response: () => {
+              return {
+                code: 20000,
+                data: allData1,
+                success: true,
+                message: '成功',
+                detail: '成功请求的详情--20000--successed.'
+              }
+          
+        }
+    },{
+      url: `/{{timestamp}}/tree/Data`,
+      type: 'get',
+      response: (config) => {
+          const { id } = config.query
+          let result = []
+          if(id) {
+          switch (Number(id)) {
+            case 0:
+            result = singleData
+            break
+            case 2:
+            result = singleData1
+            break
+            default:
+            result = []
+              break
+          }
+        } else {
+          result = rootNode
+        }
+            return {
+              code: 20000,
+              data: result,
+              success: true,
+              message: '成功',
+              detail: '成功请求的详情--20000--successed.'
+            }
+        
+      }
+    },
+    {
+      url: `/{{timestamp}}/tree/create`,
+      type: 'post',
+      response: _ => {
+        return {
+          code: 20000,
+          data: 'success',
+          success: true,
+          message: '成功',
+          detail: '成功请求的详情--20000--successed.'
+        }
+      }
+    },
+    {
+      url: `/{{timestamp}}/tree/save`,
+      type: 'post',
+      response: _ => {
+        return {
+          code: 20000,
+          data: 'success',
+          success: true,
+          message: '成功',
+          detail: '成功请求的详情--20000--successed.'
+        }
+      }
+    },
+]

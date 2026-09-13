@@ -1,0 +1,9 @@
+import request from '@/utils/request'
+
+export function uploadform(data) {
+  return request({
+    url: '/{{timestamp}}/upload/uploadform',
+    method: 'post',
+    data
+  })
+}
