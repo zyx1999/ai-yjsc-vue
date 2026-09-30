@@ -121,7 +121,10 @@ npm config get sass_binary_site
 
 ### 4.1 功能
 
-- 多会话管理：会话记录抽屉（新建/切换/重命名/删除），首条消息自动生成标题
+- PC 网页布局：左侧会话栏 + 右侧对话主区（窄屏自动收起为抽屉）；基于 750 设计稿的 rem 适配在 PC 端固定为 1rem = 100px（`src/utils/rem-flexible.js` 将基准宽度收敛到 750，样式按设计尺寸 1:1 输出）
+- 用户消息即时展示：发送后先上屏（附件显示“上传中”占位），上传完成自动替换为正式附件；上传失败时明确提示且本轮不发送
+- 流式输出开关：顶部「流式输出」开关（localStorage 记忆）；开启时智能体应答逐段展示（平台为整段 message 事件，展示层渐进渲染，带光标动效）；关闭时整段直接展示，中途关闭立即补全
+- 多会话管理：会话列表（新建/切换/重命名/删除），首条消息自动生成标题
 - 流式过程展示：技能加载（skill_loaded）、工作流调用（workflow_called）等进度实时展示
 - 附件上传/下载：上传后同步写入云虾会话 Workspace（Agent 按工作区相对路径读取），下载经后端代理
 - 演示登录：进入对话页自动调用 `/api/v1/auth/demo-login`（首版仅演示身份）
@@ -130,7 +133,7 @@ npm config get sass_binary_site
 
 1. 启动后端（默认端口 18080）：见 `../yuerong-java/README.md`
 2. 启动前端：`npm run dev`。`.env.development` 已配置 `VUE_APP_PROXY_TARGET=http://127.0.0.1:18080`，`/dev-api` 请求经 devServer 转发到后端；未配置该变量时回落为模板原有的本地 mock 代理行为
-3. 打开首页（掌银UI组件页）顶部「AI 智能助手」入口，或访问 `/chat`
+3. 打开首页（掌银UI组件页）顶部「AI 智能助手」入口，或直接访问 http://localhost:9527/#/chat
 
 说明：
 

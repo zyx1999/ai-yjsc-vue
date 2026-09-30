@@ -18,7 +18,8 @@ const TERMINAL_EVENTS = ['run.completed', 'run.failed', 'run.unknown']
 export function streamMessage (sessionId, payload, options) {
   const opts = options || {}
   const onEvent = opts.onEvent || function () {}
-  const timeoutMs = opts.timeoutMs || 300000
+  // 后端读取云虾默认 5 分钟（AI_READ_TIMEOUT_MS），前端留 1 分钟余量
+  const timeoutMs = opts.timeoutMs || 360000
   const url = (process.env.VUE_APP_BASE_API || '') + '/api/v1/chat/sessions/' +
     encodeURIComponent(sessionId) + '/messages'
 

@@ -1,16 +1,6 @@
 <template>
   <div id="app">
-    <transition name="fade" mode="out-in">
       <router-view />
-    </transition>
-    <van-tabbar v-if="!$route.meta.hideTabbar" route active-color="#00c3ac">
-      <van-tabbar-item replace to="/" icon="home-o">
-        首页
-      </van-tabbar-item>
-      <van-tabbar-item replace to="/mine" icon="friends-o">
-        我的
-      </van-tabbar-item>
-    </van-tabbar>
   </div>
 </template>
 

@@ -17,11 +17,12 @@
         placeholder="请输入您的问题…"
         :disabled="disabled"
         @input="autoSize"
-        @keydown.enter.exact.prevent="submit"
+        @keydown.enter.exact="onEnter"
       ></textarea>
       <button v-if="!sending" type="button" class="input-send" :disabled="disabled || !canSend" @click="submit">发送</button>
       <button v-else type="button" class="input-stop" @click="$emit('stop')">停止</button>
     </div>
+    <p class="input-hint">Enter 发送 / Shift + Enter 换行，支持上传附件</p>
   </div>
 </template>
 
@@ -63,6 +64,14 @@ export default {
     removeFile (index) {
       this.files.splice(index, 1)
     },
+    onEnter (event) {
+      // 中文输入法组合键期间不触发发送
+      if (event && (event.isComposing || event.keyCode === 229)) {
+        return
+      }
+      event.preventDefault()
+      this.submit()
+    },
     submit () {
       if (!this.canSend || this.disabled || this.sending) {
         return
@@ -87,37 +96,41 @@ export default {
 <style scoped lang="scss">
 .input-bar {
   background: #fff;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 16px 24px calc(16px + env(safe-area-inset-bottom));
+  padding: 14px 24px 16px;
 
   .input-files {
     display: flex;
     flex-wrap: wrap;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 
     .input-file {
       display: flex;
       align-items: center;
       max-width: 100%;
-      margin: 0 12px 8px 0;
-      padding: 8px 16px;
-      border-radius: 12px;
+      margin: 0 8px 8px 0;
+      padding: 5px 10px;
+      border-radius: 6px;
       background: #f3f6f5;
-      font-size: 24px;
-      color: #4a4a4a;
+      font-size: 13px;
+      color: #4a5a6a;
 
       .input-file-name {
-        max-width: 360px;
+        max-width: 260px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
 
       .input-file-remove {
-        margin-left: 12px;
-        color: #999;
-        font-size: 30px;
-        line-height: 30px;
+        margin-left: 8px;
+        color: #8a97a8;
+        font-size: 16px;
+        line-height: 16px;
+        cursor: pointer;
+
+        &:hover {
+          color: #d9534f;
+        }
       }
     }
   }
@@ -133,59 +146,142 @@ export default {
 
   .input-attach {
     flex: none;
-    width: 64px;
-    height: 64px;
-    margin-right: 16px;
-    border: none;
+    width: 36px;
+    height: 36px;
+    margin-right: 10px;
+    border: 1px solid #dcdfe6;
     border-radius: 50%;
-    background: #f3f6f5;
-    color: #6a6a6a;
-    font-size: 40px;
-    line-height: 64px;
+    background: #fff;
+    color: #6a7a8a;
+    font-size: 20px;
+    line-height: 34px;
     text-align: center;
     padding: 0;
+    cursor: pointer;
+
+    &:hover {
+      border-color: #00c3ac;
+      color: #00a996;
+    }
 
     &:disabled {
       opacity: 0.5;
+      cursor: default;
     }
   }
 
   .input-text {
     flex: 1;
     max-height: 120px;
-    min-height: 64px;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 16px;
-    background: #f6f6f6;
-    font-size: 28px;
-    line-height: 40px;
+    min-height: 40px;
+    padding: 9px 14px;
+    border: 1px solid #dcdfe6;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 14px;
+    line-height: 22px;
     resize: none;
     outline: none;
     box-sizing: border-box;
     font-family: inherit;
+
+    &:focus {
+      border-color: #00c3ac;
+    }
   }
 
   .input-send,
   .input-stop {
     flex: none;
-    width: 128px;
-    height: 64px;
-    margin-left: 16px;
+    width: 88px;
+    height: 40px;
+    margin-left: 12px;
     border: none;
-    border-radius: 32px;
-    font-size: 28px;
+    border-radius: 8px;
+    font-size: 14px;
     color: #fff;
     background: #00c3ac;
+    cursor: pointer;
+
+    &:hover {
+      background: #00b39e;
+    }
 
     &:disabled {
       opacity: 0.4;
+      cursor: default;
     }
   }
 
   .input-stop {
-    background: #f0f0f0;
-    color: #666;
+    background: #f0f2f5;
+    color: #5a6a7a;
+
+    &:hover {
+      background: #e6e9ee;
+    }
+  }
+
+  .input-hint {
+    margin: 8px 0 0 46px;
+    font-size: 12px;
+    color: #a8b3bf;
+  }
+}
+
+@media (max-width: 750px) {
+  .input-bar {
+    padding: 16px 24px calc(16px + env(safe-area-inset-bottom));
+
+    .input-files {
+      margin-bottom: 12px;
+
+      .input-file {
+        margin: 0 12px 8px 0;
+        padding: 8px 16px;
+        border-radius: 12px;
+        font-size: 24px;
+
+        .input-file-name {
+          max-width: 360px;
+        }
+
+        .input-file-remove {
+          margin-left: 12px;
+          font-size: 30px;
+          line-height: 30px;
+        }
+      }
+    }
+
+    .input-attach {
+      width: 64px;
+      height: 64px;
+      margin-right: 16px;
+      font-size: 40px;
+      line-height: 62px;
+    }
+
+    .input-text {
+      min-height: 64px;
+      padding: 12px 20px;
+      border-radius: 16px;
+      font-size: 28px;
+      line-height: 40px;
+    }
+
+    .input-send,
+    .input-stop {
+      width: 128px;
+      height: 64px;
+      margin-left: 16px;
+      border-radius: 32px;
+      font-size: 28px;
+    }
+
+    .input-hint {
+      display: none;
+    }
   }
 }
 </style>

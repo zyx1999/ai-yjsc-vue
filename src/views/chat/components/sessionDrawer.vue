@@ -5,32 +5,25 @@
       <button type="button" class="drawer-new" @click="$emit('create')">＋ 新会话</button>
     </div>
     <div class="drawer-list">
-      <p v-if="!sessions.length" class="drawer-empty">暂无历史会话</p>
-      <div
-        v-for="item in sessions"
-        :key="item.id"
-        :class="['drawer-item', item.id === activeId ? 'drawer-item-active' : '']"
-        @click="$emit('select', item.id)"
-      >
-        <div class="drawer-item-main">
-          <p class="drawer-item-title">{{ item.title }}</p>
-          <p class="drawer-item-time">{{ timeOf(item) }}</p>
-        </div>
-        <div class="drawer-item-actions">
-          <span @click.stop="rename(item)">重命名</span>
-          <span @click.stop="remove(item)">删除</span>
-        </div>
-      </div>
+      <session-list-panel
+        :sessions="sessions"
+        :active-id="activeId"
+        @select="$emit('select', $event)"
+        @rename="$emit('rename', $event)"
+        @remove="$emit('remove', $event)"
+      />
     </div>
   </van-popup>
 </template>
 
 <script>
-import { MessageBox } from 'mint-ui'
-import { prettyTime } from '@/utils/chatTime'
+import SessionListPanel from './sessionListPanel'
 
 export default {
   name: 'SessionDrawer',
+  components: {
+    SessionListPanel
+  },
   props: {
     visible: {
       type: Boolean,
@@ -58,34 +51,6 @@ export default {
       if (!value) {
         this.$emit('close')
       }
-    },
-    timeOf (item) {
-      return prettyTime(item.lastMessageAt || item.createdAt)
-    },
-    rename (item) {
-      MessageBox({
-        title: '重命名会话',
-        message: '',
-        showInput: true,
-        inputValue: item.title,
-        inputPattern: /^.{1,60}$/,
-        inputErrorMessage: '标题需为 1-60 个字符',
-        showCancelButton: true
-      }).then(result => {
-        const title = (result && result.value || '').trim()
-        if (title) {
-          this.$emit('rename', { id: item.id, title: title })
-        }
-      }).catch(() => {})
-    },
-    remove (item) {
-      MessageBox({
-        title: '删除会话',
-        message: '删除后会话将从列表中移除，是否继续？',
-        showCancelButton: true
-      }).then(() => {
-        this.$emit('remove', item.id)
-      }).catch(() => {})
     }
   }
 }
@@ -95,89 +60,55 @@ export default {
 .session-drawer {
   display: flex;
   flex-direction: column;
-  background: #f7f7f7;
+  background: #f7f9fa;
 
   .drawer-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 24px 28px;
+    padding: 16px 18px;
     background: #fff;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid #eceff3;
 
     .drawer-title {
-      font-size: 32px;
+      font-size: 16px;
       font-weight: 600;
-      color: #333;
+      color: #1f2d3d;
     }
 
     .drawer-new {
       border: none;
       background: none;
       padding: 0;
-      font-size: 26px;
-      color: #00c3ac;
+      font-size: 13px;
+      color: #00a996;
+      cursor: pointer;
     }
   }
 
   .drawer-list {
     flex: 1;
     overflow-y: auto;
-    padding: 12px 0;
+    padding: 12px;
+  }
+}
 
-    .drawer-empty {
-      padding: 60px 0;
-      text-align: center;
-      color: #b5b5b5;
-      font-size: 26px;
+@media (max-width: 750px) {
+  .session-drawer {
+    .drawer-head {
+      padding: 24px 28px;
+
+      .drawer-title {
+        font-size: 32px;
+      }
+
+      .drawer-new {
+        font-size: 26px;
+      }
     }
 
-    .drawer-item {
-      display: flex;
-      align-items: center;
-      margin: 12px 20px;
-      padding: 20px 24px;
-      border-radius: 16px;
-      background: #fff;
-
-      &.drawer-item-active {
-        outline: 2px solid rgba(0, 195, 172, 0.6);
-
-        .drawer-item-title {
-          color: #00a996;
-        }
-      }
-
-      .drawer-item-main {
-        flex: 1;
-        min-width: 0;
-
-        .drawer-item-title {
-          margin: 0;
-          font-size: 28px;
-          color: #333;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .drawer-item-time {
-          margin: 8px 0 0;
-          font-size: 22px;
-          color: #b5b5b5;
-        }
-      }
-
-      .drawer-item-actions {
-        flex: none;
-        margin-left: 16px;
-        font-size: 24px;
-        color: #7a7a7a;
-
-        span {
-          margin-left: 20px;
-        }
-      }
+    .drawer-list {
+      padding: 12px 0;
     }
   }
 }

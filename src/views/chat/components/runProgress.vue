@@ -30,22 +30,22 @@ export default {
 
 <style scoped lang="scss">
 .run-progress {
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 
   .run-step {
     display: flex;
     align-items: baseline;
     flex-wrap: wrap;
-    margin-bottom: 8px;
-    font-size: 24px;
-    color: #7a7a7a;
-    line-height: 36px;
+    margin-bottom: 4px;
+    font-size: 13px;
+    color: #7a8b9a;
+    line-height: 20px;
 
     .run-dot {
       flex: none;
-      width: 12px;
-      height: 12px;
-      margin-right: 12px;
+      width: 8px;
+      height: 8px;
+      margin-right: 8px;
       border-radius: 50%;
       background: #00c3ac;
       position: relative;
@@ -57,12 +57,12 @@ export default {
     }
 
     .run-title {
-      color: #5a5a5a;
+      color: #5a6a7a;
     }
 
     .run-message {
-      margin-left: 8px;
-      color: #9a9a9a;
+      margin-left: 6px;
+      color: #9aa8b5;
     }
   }
 }
@@ -74,6 +74,28 @@ export default {
   }
   50% {
     opacity: 1;
+  }
+}
+
+@media (max-width: 750px) {
+  .run-progress {
+    margin-bottom: 16px;
+
+    .run-step {
+      margin-bottom: 8px;
+      font-size: 24px;
+      line-height: 36px;
+
+      .run-dot {
+        width: 12px;
+        height: 12px;
+        margin-right: 12px;
+      }
+
+      .run-message {
+        margin-left: 8px;
+      }
+    }
   }
 }
 </style>
