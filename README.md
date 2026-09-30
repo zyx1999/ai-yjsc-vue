@@ -114,3 +114,33 @@ npm config get sass_binary_site
 ### 3.6. 发布工程
 
 请使用轻云 IDE 的发布功能，将前端静态资源发布至轻云站点服务。
+
+## 4. AI 智能助手模块（云虾大模型对话）
+
+模板新增「AI 智能助手」对话模块（`src/views/chat`），对接 `yuerong-java` 后端，并经其代理云虾（oneagent）平台的 Message / Files 接口。
+
+### 4.1 功能
+
+- 多会话管理：会话记录抽屉（新建/切换/重命名/删除），首条消息自动生成标题
+- 流式过程展示：技能加载（skill_loaded）、工作流调用（workflow_called）等进度实时展示
+- 附件上传/下载：上传后同步写入云虾会话 Workspace（Agent 按工作区相对路径读取），下载经后端代理
+- 演示登录：进入对话页自动调用 `/api/v1/auth/demo-login`（首版仅演示身份）
+
+### 4.2 本地联调
+
+1. 启动后端（默认端口 18080）：见 `../yuerong-java/README.md`
+2. 启动前端：`npm run dev`。`.env.development` 已配置 `VUE_APP_PROXY_TARGET=http://127.0.0.1:18080`，`/dev-api` 请求经 devServer 转发到后端；未配置该变量时回落为模板原有的本地 mock 代理行为
+3. 打开首页（掌银UI组件页）顶部「AI 智能助手」入口，或访问 `/chat`
+
+说明：
+
+- 应用事件协议（SSE，POST 携带 JSON）：`run.started / run.progress / answer.completed / run.completed / run.failed / run.unknown`；前端按 `sequence` 去重，断流或未收到终止事件按「结果未知」提示（不自动重发）
+- 相关代码：`src/api/chat.js`（REST）、`src/api/chatStream.js`（SSE 流）、`src/utils/sseParser.js`（帧解析）、`src/store/modules/chat.js`（状态）
+- 生产部署时由网关/反向代理将 `VUE_APP_BASE_API`（如 `/prod-api`）转发到后端
+
+### 4.3 测试与构建
+
+- 单元测试：`npm run test:unit`（新增 `tests/unit/utils/sseParser.spec.js`）
+- 构建：`npm run build:test` / `npm run build:prod`，产物分别为 `dist_test/` / `dist_prod/`
+
+注：`tests/unit/components/SvgIcon.spec.js` 与 `tests/unit/utils/validate.spec.js` 引用本模板中不存在的模块（模板遗留问题），先于本次改动即失败。

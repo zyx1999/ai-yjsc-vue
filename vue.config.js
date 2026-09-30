@@ -17,11 +17,15 @@ const name = pkg.name || process.env.VUE_APP_NAME // 主页标题
 const port = process.env.VUE_APP_PORT // dev port
 const rawArgv = process.argv.slice(2)
 
-//获取env参数
-const envArr = JSON.parse(JSON.stringify(process.argv[3])).split(',')
-let resultEnvArr = envArr.map(_env => {
-  return _env.slice(3)
-})
+//获取env参数（未传附加参数时不注入，避免 JSON.parse(undefined) 报错）
+const rawEnvArg = process.argv[3] || ''
+let resultEnvArr = []
+if (rawEnvArg) {
+  const envArr = JSON.parse(JSON.stringify(rawEnvArg)).split(',')
+  resultEnvArr = envArr.map(_env => {
+    return _env.slice(3)
+  })
+}
 function getEnvOptions(options){
   let envObj = {}
   for(var i=0;i<options.length;i++){
@@ -62,7 +66,8 @@ module.exports = {
       // change xxx-api/login => mock/login
       // detail: https://cli.vuejs.org/config/#devserver-proxy
       [process.env.VUE_APP_BASE_API]: {
-        target: `http://localhost:${port}/mock`,
+        // 对接 Java 后端时在 .env 配置 VUE_APP_PROXY_TARGET（默认 18080），未配置时回落到本地 mock
+        target: process.env.VUE_APP_PROXY_TARGET || `http://localhost:${port}/mock`,
         changeOrigin: true,
         pathRewrite: {
           ['^' + process.env.VUE_APP_BASE_API]: ''

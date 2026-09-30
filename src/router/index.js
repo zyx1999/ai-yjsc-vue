@@ -19,6 +19,14 @@ const routes = [
       meta: {
         title: '我的'
       }
+    },{
+      path: '/chat',
+      name: 'chat',
+      component: () => import (/*webpackChunkName:'chat'*/ '@/views/chat/index.vue'),
+      meta: {
+        title: 'AI智能助手',
+        hideTabbar: true
+      }
     },
     ...mbRouters
 ]

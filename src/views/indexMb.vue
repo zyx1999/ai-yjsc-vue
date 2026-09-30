@@ -9,6 +9,13 @@
      <div class="wrapper">      
       <div class="myPage"></div>
       <div class="content-one list-view-new">
+        <router-link class="assistant-entry" to="/chat">
+          <div class="assistant-entry-main">
+            <p class="assistant-entry-title">AI 智能助手</p>
+            <p class="assistant-entry-sub">云虾大模型 · 对话办理业务</p>
+          </div>
+          <span class="assistant-entry-action">去体验</span>
+        </router-link>
         <h3>- 掌银UI组件 -</h3>
         <ul class="list">
         <li v-for="(item, index) in mbRoutes.slice(1, mbRoutes.length)" :key="index">
@@ -55,6 +62,40 @@ export default {
 </script>
 <style scoped lang="scss">
 .list-view-new {
+  .assistant-entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 24px 32px 8px;
+    padding: 32px 36px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #00c3ac 0%, #00a3c2 100%);
+    color: #fff;
+    text-decoration: none;
+
+    .assistant-entry-main {
+      .assistant-entry-title {
+        margin: 0;
+        font-size: 34px;
+        font-weight: 600;
+      }
+
+      .assistant-entry-sub {
+        margin: 10px 0 0;
+        font-size: 24px;
+        opacity: 0.85;
+      }
+    }
+
+    .assistant-entry-action {
+      flex: none;
+      padding: 10px 28px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.2);
+      font-size: 26px;
+    }
+  }
+
   .mint-header{
     padding: 0;
     .mint-header-button.is-left {
