@@ -27,6 +27,14 @@ const routes = [
         title: 'AI智能助手',
         hideTabbar: true
       }
+    },{
+      path: '/diligence',
+      name: 'diligence',
+      component: () => import (/*webpackChunkName:'diligence'*/ '@/views/diligence/index.vue'),
+      meta: {
+        title: '智能尽调工作台',
+        hideTabbar: true
+      }
     },
     ...mbRouters
 ]

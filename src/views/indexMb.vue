@@ -16,6 +16,13 @@
           </div>
           <span class="assistant-entry-action">去体验</span>
         </router-link>
+        <router-link class="assistant-entry diligence-entry" to="/diligence">
+          <div class="assistant-entry-main">
+            <p class="assistant-entry-title">智能尽调工作台</p>
+            <p class="assistant-entry-sub">企业尽调 · 七维调查与材料核对</p>
+          </div>
+          <span class="assistant-entry-action">去体验</span>
+        </router-link>
         <h3>- 掌银UI组件 -</h3>
         <ul class="list">
         <li v-for="(item, index) in mbRoutes.slice(1, mbRoutes.length)" :key="index">
@@ -94,6 +101,10 @@ export default {
       background: rgba(255, 255, 255, 0.2);
       font-size: 26px;
     }
+  }
+
+  .diligence-entry {
+    background: linear-gradient(135deg, #147d78 0%, #1f5c6b 100%);
   }
 
   .mint-header{

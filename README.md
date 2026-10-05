@@ -147,3 +147,24 @@ npm config get sass_binary_site
 - 构建：`npm run build:test` / `npm run build:prod`，产物分别为 `dist_test/` / `dist_prod/`
 
 注：`tests/unit/components/SvgIcon.spec.js` 与 `tests/unit/utils/validate.spec.js` 引用本模板中不存在的模块（模板遗留问题），先于本次改动即失败。
+
+## 5. 智能尽调工作台（tyy/frontend 整合）
+
+已将 `tyy/frontend` 的尽调工作台并入本工程的 `/diligence` 路由，保留 Element UI 桌面视图，通过路由懒加载隔离，不影响掌银移动端页面。
+
+- 入口：首页「智能尽调工作台」卡片，或直接访问 `http://localhost:9527/#/diligence`
+- 页面与组件：`src/views/diligence/index.vue`、`src/components/diligence/{DimensionCard,FinancialReview,MarkdownMessage}.vue`
+- 接口与样式：`src/api/diligence.js`、`src/api/diligenceRuntime.js`、`src/styles/diligence.scss`
+- Element UI：`src/views/diligence/element-bootstrap.js` 在懒加载分包内注册 Element UI 2.13.2 与主题样式，仅访问 `/diligence` 时才加载
+
+### 5.1 本地联调
+
+1. 启动后端（默认端口 18080，需同时提供 `/api/v1/diligence` 尽调接口）
+2. 启动前端：`npm run dev`（或 `npm run local`）。尽调工作台与主应用共用同一转发：`VUE_APP_BASE_API`（如 `/dev-api`）经 devServer 转发到 `VUE_APP_PROXY_TARGET`（默认 `http://127.0.0.1:18080`）
+3. 访问 http://localhost:9527/#/diligence
+
+说明：
+
+- 尽调工作台复用主应用代理前缀，无需单独配置代理
+- 部署后可在 `public/diligence-runtime-config.js` 通过 `window.__YUERONG_CONFIG__.backendBaseUrl` 覆盖后端地址，无需重新构建
+- 注意：本工程启用 `postcss-pxtorem`（rootValue=100）与 `rem-flexible`，在 ≥750px 宽度下 1rem=100px，桌面端按 1:1 渲染；窄屏移动端会整体按比例缩放
