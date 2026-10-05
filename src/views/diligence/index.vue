@@ -646,7 +646,32 @@ export default {
         if (value) await this.performChat(value)
       })
     },
+    assistantCount() {
+      return this.messages.reduce(
+        (total, message) => total + (message.role === 'assistant' ? 1 : 0),
+        0
+      )
+    },
+    // 连接可能因长耗时模型等待被网关/浏览器中断，但后端仍在运行并会持久化回复：
+    // 轮询会话，直到出现新的助手回复或达到等待上限。
+    async awaitAssistantReply(assistantBefore) {
+      const deadline = Date.now() + 10 * 60 * 1000
+      for (;;) {
+        try {
+          await this.load(this.task, true)
+        } catch (e) {
+          // 轮询期间的瞬时错误忽略，继续等待后端结果落地。
+        }
+        if (this.assistantCount() > assistantBefore) return true
+        if (Date.now() >= deadline) return false
+        this.notice = '后端仍在处理，正在等待结果返回…'
+        await new Promise((resolve) => setTimeout(resolve, 3000))
+      }
+    },
     async performChat(text, attachment) {
+      const assistantBefore = this.assistantCount()
+      let failure = null
+      let failed = false
       try {
         await api.streamChat(this.task, text, (event) => {
           if (event.type === 'run.progress') this.notice = '正在处理…'
@@ -656,18 +681,24 @@ export default {
             this.proposalId = event.payload.proposal_id
             this.confirmKey = id()
           }
-          if (event.type === 'run.unknown' || event.type === 'run.failed')
+          if (event.type === 'run.unknown' || event.type === 'run.failed') {
+            failed = true
             this.notice = event.payload.error.message
+          }
         }, attachment)
       } catch (error) {
-        if (this.notice === '正在处理…')
-          this.notice = '连接未完整结束，请重新读取会话核实结果。'
-        throw error
-      } finally {
-        await this.load(this.task)
-        await this.refreshSessions()
-        if (this.proposalId) await this.readProposal(this.proposalId)
+        failure = error
       }
+      // 连接不完整结束（超时/中断）时后端可能仍在运行，等待其结果而不是直接报错。
+      let recovered = false
+      if (failure && failure.pending) {
+        recovered = await this.awaitAssistantReply(assistantBefore)
+      }
+      await this.load(this.task)
+      await this.refreshSessions()
+      if (this.proposalId) await this.readProposal(this.proposalId)
+      if (failure && !recovered) throw failure
+      if (recovered || (!failed && this.notice === '正在处理…')) this.notice = ''
     },
     onComposerKeydown(event) {
       if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return

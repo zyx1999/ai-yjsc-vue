@@ -166,5 +166,6 @@ npm config get sass_binary_site
 说明：
 
 - 尽调工作台复用主应用代理前缀，无需单独配置代理
+- 前端 SSE 流日志：默认在浏览器控制台打印 `[SSE]` 帧（事件类型/序号/耗时/载荷）与连接开始/结束/中断；执行 `localStorage.setItem('diligence.sseLog','0')` 可关闭
 - 部署后可在 `public/diligence-runtime-config.js` 通过 `window.__YUERONG_CONFIG__.backendBaseUrl` 覆盖后端地址，无需重新构建
 - 注意：本工程启用 `postcss-pxtorem`（rootValue=100）与 `rem-flexible`，在 ≥750px 宽度下 1rem=100px，桌面端按 1:1 渲染；窄屏移动端会整体按比例缩放
