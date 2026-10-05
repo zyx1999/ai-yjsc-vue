@@ -2,10 +2,6 @@
   <div class="index-view">
     <section>
       <div class="statusBar"></div>
-      <mt-header title="掌银 移动 H5 功能样例" fixed>
-        <!-- <mt-button icon="search" slot="right" @click="handleBack"></mt-button> -->
-        <!-- <mt-button icon="more" slot="right" @click="handleNotice"></mt-button> -->
-      </mt-header>
      <div class="wrapper">      
       <div class="myPage"></div>
       <div class="content-one list-view-new">
@@ -49,12 +45,10 @@
 
 <script >
 
-import mbRoutes from '../router/mbankRouter';
 // 主页面，列表
 export default {
   data() {
     return {
-      mbRoutes
     };
   },
   methods: {

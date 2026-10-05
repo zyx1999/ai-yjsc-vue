@@ -14,7 +14,6 @@ import '@/styles/base.scss' // 引用基础样式
 import '@/styles/common.scss' // 重置 Vant 样式
 import '@/assets/font/vant_font/index.css'
 import '@/styles/mobileBank/index.scss' // 引用掌银风格样式
-import '@udesk/mbank-ui-v2/lib/style/index.css'
 
 import '@/permission' //获取accesskey/路由守卫
 import '@/utils/rem-flexible' // 开启移动端屏幕尺寸适配
