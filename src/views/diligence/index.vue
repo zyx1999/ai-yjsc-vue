@@ -141,6 +141,25 @@
               <button :disabled="busy" @click="chooseUpload('FINANCIAL')"><i class="el-icon-upload2" /> 上传财报</button>
               <button :disabled="busy" @click="chooseUpload('CREDIT')"><i class="el-icon-document" /> 上传征信</button>
             </div>
+            <div v-if="task" class="composer-files">
+              <button type="button" class="composer-files-head" @click="toggleFiles">
+                <i class="el-icon-paperclip" /><span>会话文件</span>
+                <span class="composer-files-count">{{ sessionFiles.length }}</span>
+                <span class="composer-files-action">{{ filesOpen ? '收起' : '展开' }}</span>
+              </button>
+              <div v-if="filesOpen" class="composer-files-body">
+                <p v-if="filesLoading" class="composer-files-hint">正在读取文件列表…</p>
+                <p v-else-if="!sessionFiles.length" class="composer-files-hint">当前会话暂无文件</p>
+                <ul v-else class="composer-files-list">
+                  <li v-for="file in sessionFiles" :key="file.name" class="composer-file">
+                    <span class="composer-file-name" :title="file.name">{{ file.name }}</span>
+                    <span class="composer-file-size">{{ formatSize(file.size) }}</span>
+                    <span class="composer-file-tag" :class="file.source">{{ file.source === 'platform' ? '平台' : '本地' }}</span>
+                  </li>
+                </ul>
+                <p v-if="filesError" class="composer-files-hint is-error">{{ filesError }}</p>
+              </div>
+            </div>
             <p v-if="notice" class="composer-notice">{{ notice }}</p>
             <p v-if="pendingOperations.length" class="composer-notice"><i class="el-icon-loading" /> 后端正在处理，完成后自动刷新结果。</p>
             <p v-for="operation in failedOperations" :key="operation.operation_id" class="composer-notice">业务未完成：{{ (operation.error || {}).message || operation.stage }}</p>
@@ -358,6 +377,10 @@ export default {
     proposalFiles: [],
     activeCode: '',
     confirmKey: '',
+    sessionFiles: [],
+    filesOpen: false,
+    filesLoading: false,
+    filesError: '',
     labels: dimensionNames,
     fieldLabels: {}
   }),
@@ -432,6 +455,35 @@ export default {
     present(value) {
       return typeof value === 'string' ? value.replace(/（模拟）/g, '') : value
     },
+    formatSize(bytes) {
+      const value = Number(bytes)
+      if (!isFinite(value) || value < 0) return ''
+      if (value < 1024) return value + ' B'
+      if (value < 1024 * 1024) return (value / 1024).toFixed(1) + ' KB'
+      return (value / 1024 / 1024).toFixed(1) + ' MB'
+    },
+    /** 会话文件列表（平台工作区 + 已登记材料），上传与对话完成后自动刷新。 */
+    async refreshFiles() {
+      if (!this.task) {
+        this.sessionFiles = []
+        this.filesError = ''
+        return
+      }
+      this.filesLoading = true
+      try {
+        const data = await api.sessionFiles(this.task)
+        this.sessionFiles = (data && data.files) || []
+        this.filesError = (data && data.platform_error) || ''
+      } catch (error) {
+        this.filesError = error.message || '文件列表读取失败'
+      } finally {
+        this.filesLoading = false
+      }
+    },
+    toggleFiles() {
+      this.filesOpen = !this.filesOpen
+      if (this.filesOpen) this.refreshFiles()
+    },
     async refreshSessions() {
       this.sessions = (await api.sessions()).map((s) =>
         Object.assign({}, s, { menuOpen: false })
@@ -467,6 +519,10 @@ export default {
       this.proposal = null
       this.proposalId = ''
       this.notice = ''
+      this.sessionFiles = []
+      this.filesOpen = false
+      this.filesLoading = false
+      this.filesError = ''
     },
     async deleteSession(session) {
       await this.run(async () => {
@@ -702,6 +758,7 @@ export default {
       }
       await this.load(this.task)
       await this.refreshSessions()
+      this.refreshFiles()
       if (this.proposalId) await this.readProposal(this.proposalId)
       if (failure && !recovered) throw failure
       if (recovered || (!failed && this.notice === '正在处理…')) this.notice = ''

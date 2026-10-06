@@ -38,6 +38,14 @@
             <span class="upload-item-type">{{ extOf(file.name).toUpperCase() }}</span>
             <span class="upload-item-name" :title="file.name">{{ file.name }}</span>
             <span class="upload-item-size">{{ formatSize(file.size) }}</span>
+            <span class="upload-item-status" :class="fileStatusClass(file)">{{ fileStatusText(file) }}</span>
+            <button
+              v-if="file.status === 'failed'"
+              type="button"
+              class="upload-item-retry"
+              :disabled="busy"
+              @click="retryUpload"
+            >重试</button>
             <button
               type="button"
               class="upload-item-remove"
@@ -71,10 +79,31 @@
             @click="reset"
           >重新开始</button>
         </div>
+
+        <div v-if="sessionId" class="session-files">
+          <button type="button" class="session-files-head" @click="toggleFiles">
+            <span class="session-files-icon">📎</span>
+            <span class="session-files-title">会话文件</span>
+            <span class="session-files-count">{{ sessionFiles.length }}</span>
+            <span class="session-files-action">{{ filesOpen ? '收起' : '展开' }}</span>
+          </button>
+          <div v-if="filesOpen" class="session-files-body">
+            <p v-if="filesLoading" class="session-files-hint">正在读取文件列表…</p>
+            <p v-else-if="!sessionFiles.length" class="session-files-hint">当前会话暂无文件</p>
+            <ul v-else class="session-files-list">
+              <li v-for="file in sessionFiles" :key="file.name" class="session-file">
+                <span class="session-file-name" :title="file.name">{{ file.name }}</span>
+                <span class="session-file-size">{{ formatSize(file.size) }}</span>
+                <span class="session-file-tag" :class="file.source">{{ file.source === 'platform' ? '平台' : '本地' }}</span>
+              </li>
+            </ul>
+            <p v-if="filesError" class="session-files-hint is-error">{{ filesError }}</p>
+          </div>
+        </div>
       </section>
 
       <section v-if="turns.length" class="result-card" aria-live="polite">
-        <div v-for="(turn, index) in turns" :key="turn.id" class="turn">
+        <div v-for="turn in turns" :key="turn.id" class="turn">
           <div v-if="turn.role === 'user'" class="turn-user">
             <span class="turn-role">我</span>
             <div class="turn-user-body">
@@ -93,7 +122,6 @@
               <markdown-view v-else-if="turn.content" :content="turn.content" />
               <div v-else class="turn-error">
                 <p>{{ turn.error || '未返回结果' }}</p>
-                <button v-if="turn.canVerify" type="button" :disabled="busy" @click="verify(index)">核实结果</button>
               </div>
             </div>
           </div>
@@ -108,13 +136,12 @@
 
 <script>
 /**
- * 征信 / 流水分析窗口：
- * 上传材料 → 复用 AI 智能助手的会话与附件接口上传 → 通过 SSE 获取大模型分析 →
- * 以 Markdown 渲染报告；窗口内可继续追问，会话与"AI 智能助手"共享。
+ * 征信 / 流水分析窗口（文答）：
+ * 上传材料 → 后端 /api/v1/analysis 会话与材料接口（api/analysis.js，与尽调同源、不触发登录）→
+ * 通过 SSE 获取大模型分析；断流/超时时轮询会话等待结果落库 → 以 Markdown 渲染报告。
  */
 import { Toast } from 'mint-ui'
-import { ensureLogin, createSession, uploadAttachment, getSession } from '@/api/chat'
-import { streamMessage } from '@/api/chatStream'
+import { createSession, loadSession, uploadFile, listFiles, streamChat } from '@/api/analysis'
 import MarkdownView from '@/components/markdown/MarkdownView.vue'
 
 const MAX_FILES = 5
@@ -179,7 +206,13 @@ export default {
       sessionId: null,
       turns: [],
       turnSeed: 0,
-      activeStream: null
+      activeStream: null,
+      uploading: false,
+      uploadQueued: false,
+      sessionFiles: [],
+      filesOpen: false,
+      filesLoading: false,
+      filesError: ''
     }
   },
   computed: {
@@ -217,7 +250,13 @@ export default {
       this.sessionId = null
       this.busy = false
       this.dragging = false
+      this.uploading = false
+      this.uploadQueued = false
       this.prompt = this.config.prompt
+      this.sessionFiles = []
+      this.filesOpen = false
+      this.filesLoading = false
+      this.filesError = ''
     },
     goHome () {
       this.$router.push('/diligence')
@@ -246,6 +285,7 @@ export default {
     },
     addFiles (list) {
       const picked = Array.prototype.slice.call(list || [])
+      let added = false
       picked.forEach(file => {
         if (this.files.length >= MAX_FILES) {
           Toast('最多上传 ' + MAX_FILES + ' 个文件')
@@ -265,19 +305,83 @@ export default {
           key: file.name + '-' + file.size + '-' + file.lastModified,
           name: file.name,
           size: file.size,
-          raw: file
+          raw: file,
+          status: 'pending',
+          fileId: '',
+          error: ''
         })
+        added = true
       })
+      // 选择即上传：对话前材料已进入平台会话工作区，避免“模型看不到文件”的静默失败。
+      if (added) this.drainUploads()
     },
     removeFile (index) {
       if (this.busy) return
       this.files.splice(index, 1)
     },
+    /** 串行上传未完成/失败的文件；上传失败会显式标红并可点“重试”。 */
+    async drainUploads () {
+      if (this.uploading) {
+        this.uploadQueued = true
+        return
+      }
+      this.uploading = true
+      try {
+        while (true) {
+          const queue = this.files.filter(file => file.status !== 'uploaded' && file.status !== 'uploading')
+          if (!queue.length) break
+          const sessionId = await this.ensureSession()
+          for (let i = 0; i < queue.length; i++) {
+            const file = queue[i]
+            file.status = 'uploading'
+            file.error = ''
+            try {
+              const uploaded = await uploadFile(sessionId, file.raw)
+              file.fileId = uploaded.file_id
+              file.status = 'uploaded'
+            } catch (error) {
+              file.status = 'failed'
+              file.error = error.message || '上传失败'
+              Toast('文件上传失败：' + file.name)
+            }
+          }
+          this.refreshFiles()
+          if (!this.uploadQueued) break
+          this.uploadQueued = false
+        }
+      } catch (error) {
+        this.files
+          .filter(file => file.status === 'pending' || file.status === 'uploading')
+          .forEach(file => {
+            file.status = 'failed'
+            file.error = error.message || '上传失败'
+          })
+        Toast('文件上传失败：' + (error.message || '请稍后重试'))
+      } finally {
+        this.uploading = false
+      }
+    },
+    retryUpload () {
+      this.drainUploads()
+    },
+    fileStatusText (file) {
+      if (file.status === 'failed') return '上传失败'
+      if (file.status === 'uploading') return '上传中…'
+      if (file.status === 'uploaded') return '已上传'
+      return '待上传'
+    },
+    fileStatusClass (file) {
+      return {
+        'is-uploading': file.status === 'uploading',
+        'is-uploaded': file.status === 'uploaded',
+        'is-failed': file.status === 'failed'
+      }
+    },
     async ensureSession () {
       if (this.sessionId) return this.sessionId
-      await ensureLogin()
+      // 参照尽调：会话直连创建，不触发登录
       const session = await createSession()
-      this.sessionId = session.id
+      this.sessionId = session.task_id
       return this.sessionId
     },
     async start () {
@@ -286,12 +390,20 @@ export default {
         Toast(this.files.length || this.sessionId ? '请输入分析要求' : '请先选择要分析的文件')
         return
       }
+      await this.drainUploads()
+      const failed = this.files.filter(file => file.status === 'failed')
+      if (failed.length) {
+        Toast('有文件上传失败，请重试或移除：' + failed.map(file => file.name).join('、'))
+        return
+      }
       const instruction = this.prompt.trim() || this.config.prompt
-      const pendingFiles = this.files.slice()
+      // 每次分析都携带当前全部已上传材料（含此前轮次，文件保留在列表中），
+      // 避免“继续分析”时模型看不到文件而回答“当前工作区没有发现文件”。
+      const attachmentFiles = this.files.filter(file => file.status === 'uploaded' && file.fileId)
       const userTurn = {
         id: 'turn-' + (++this.turnSeed),
         role: 'user',
-        files: pendingFiles.map(file => ({ key: file.key, name: file.name })),
+        files: attachmentFiles.map(file => ({ key: file.key, name: file.name })),
         text: instruction
       }
       const assistantTurn = {
@@ -300,53 +412,83 @@ export default {
         pending: true,
         stage: '正在准备…',
         content: '',
-        error: '',
-        canVerify: false
+        error: ''
       }
       this.turns.push(userTurn, assistantTurn)
       this.busy = true
       try {
         const sessionId = await this.ensureSession()
-        const attachmentIds = []
-        for (let i = 0; i < pendingFiles.length; i++) {
-          assistantTurn.stage = '正在上传文件 ' + (i + 1) + '/' + pendingFiles.length + '：' + pendingFiles[i].name
-          const uploaded = await uploadAttachment(sessionId, pendingFiles[i].raw)
-          attachmentIds.push(uploaded.id)
-        }
-        // 附件全部上传成功后本次文件即被消费；失败时保留列表便于重试
-        this.files = []
-        assistantTurn.stage = '大模型正在分析，请稍候…'
-        await this.consumeStream(sessionId, instruction, attachmentIds, assistantTurn)
-        if (!assistantTurn.content && !assistantTurn.error) {
-          assistantTurn.error = '未获取到分析结果，请稍后重试。'
-          assistantTurn.canVerify = true
-        }
+        await this.performChat(sessionId, assistantTurn, instruction, attachmentFiles.map(file => file.fileId))
       } catch (error) {
         assistantTurn.error = error.message || '分析未完成，请稍后重试。'
-        assistantTurn.canVerify = !!this.sessionId
       } finally {
         assistantTurn.pending = false
         this.activeStream = null
         this.busy = false
+        this.refreshFiles()
       }
     },
-    consumeStream (sessionId, text, attachmentIds, turn) {
-      return new Promise((resolve, reject) => {
-        const stream = streamMessage(sessionId, { text, attachmentIds }, {
-          onEvent: event => {
-            if (event.type === 'run.progress') {
-              turn.stage = event.message || stageLabel(event.stage)
-            } else if (event.type === 'answer.completed') {
-              turn.content = event.content || ''
-              turn.stage = ''
-            } else if (event.type === 'run.failed' || event.type === 'run.unknown') {
-              turn.error = event.message || '处理未完成，请稍后重试。'
-            }
+    // 参照尽调 performChat：SSE 会话调用；断流时不直接失败，轮询会话等待结果落库。
+    async performChat (sessionId, turn, text, attachmentIds) {
+      turn.stage = '大模型正在分析，请稍候…'
+      let failure = null
+      try {
+        const stream = streamChat(sessionId, text, attachmentIds, event => {
+          if (event.type === 'run.progress') {
+            turn.stage = event.message || stageLabel(event.stage)
+          } else if (event.type === 'answer.completed') {
+            turn.content = event.content || ''
+            turn.stage = ''
+          } else if (event.type === 'run.failed' || event.type === 'run.unknown') {
+            turn.error = event.message || '处理未完成，请稍后重试。'
           }
         })
         this.activeStream = stream
-        stream.promise.then(resolve, reject)
-      })
+        await stream.promise
+      } catch (error) {
+        failure = error
+      }
+      // 连接不完整结束（超时/中断）时后端可能仍在运行：轮询会话，直到结果落库。
+      if (failure && failure.pending && await this.awaitAssistantReply(turn)) return
+      if (failure && !failure.aborted) throw failure
+      if (!turn.content && !turn.error) turn.error = '未获取到分析结果，请稍后重试。'
+    },
+    // 连接可能因长耗时模型等待被网关/浏览器中断，但后端仍在运行并会持久化回复：
+    // 轮询会话，直到出现新的助手回复或达到等待上限（参照尽调 awaitAssistantReply）。
+    async awaitAssistantReply (turn) {
+      const deadline = Date.now() + 10 * 60 * 1000
+      const shown = this.turns
+        .filter(item => item !== turn && item.role === 'assistant' && item.content)
+        .map(item => item.content)
+      for (;;) {
+        if (!this.sessionId || this._isDestroyed || this.turns.indexOf(turn) < 0) return false
+        try {
+          const detail = await loadSession(this.sessionId)
+          const messages = (detail && detail.messages) || []
+          for (let i = messages.length - 1; i >= 0; i--) {
+            const message = messages[i]
+            if (
+              message.role === 'ASSISTANT' &&
+              message.content &&
+              shown.indexOf(message.content) < 0
+            ) {
+              if (message.status === 'FAILED') {
+                turn.error = message.content
+              } else {
+                turn.content = message.content
+                turn.error = ''
+              }
+              turn.stage = ''
+              return true
+            }
+          }
+        } catch (error) {
+          // 轮询期间的瞬时错误忽略，继续等待后端结果落地。
+        }
+        if (Date.now() >= deadline) return false
+        turn.stage = '后端仍在处理，正在等待结果返回…'
+        await new Promise(resolve => setTimeout(resolve, 3000))
+      }
     },
     abortStream () {
       if (!this.activeStream) return
@@ -357,40 +499,27 @@ export default {
       }
       this.activeStream = null
     },
-    /** 连接中断/超时后，从会话中重新读取大模型已落库的分析结果。 */
-    async verify (index) {
-      const turn = this.turns[index]
-      if (!turn || !this.sessionId || this.busy) return
-      this.busy = true
-      try {
-        const detail = await getSession(this.sessionId)
-        const messages = (detail && detail.messages) || []
-        const shown = this.turns.filter((item, i) => i !== index && item.content).map(item => item.content)
-        let content = ''
-        for (let i = messages.length - 1; i >= 0; i--) {
-          const message = messages[i]
-          if (
-            message.role === 'ASSISTANT' &&
-            message.status === 'SUCCEEDED' &&
-            message.content &&
-            shown.indexOf(message.content) < 0
-          ) {
-            content = message.content
-            break
-          }
-        }
-        if (content) {
-          turn.content = content
-          turn.error = ''
-          turn.canVerify = false
-        } else {
-          Toast('暂未获取到新的分析结果，后端可能仍在处理，请稍后再试')
-        }
-      } catch (error) {
-        Toast(error.message || '核实失败，请稍后再试')
-      } finally {
-        this.busy = false
+    /** 会话文件列表（平台工作区 + 本地已登记材料），上传与运行完成后自动刷新。 */
+    async refreshFiles () {
+      if (!this.sessionId) {
+        this.sessionFiles = []
+        this.filesError = ''
+        return
       }
+      this.filesLoading = true
+      try {
+        const data = await listFiles(this.sessionId)
+        this.sessionFiles = (data && data.files) || []
+        this.filesError = (data && data.platform_error) || ''
+      } catch (error) {
+        this.filesError = error.message || '文件列表读取失败'
+      } finally {
+        this.filesLoading = false
+      }
+    },
+    toggleFiles () {
+      this.filesOpen = !this.filesOpen
+      if (this.filesOpen) this.refreshFiles()
     },
     reset () {
       this.applyKind()
@@ -555,6 +684,48 @@ export default {
       font-size: 12px;
     }
 
+    .upload-item-status {
+      flex: none;
+      margin-right: 6px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: #f0f3f6;
+      color: #7a8a99;
+      font-size: 11px;
+
+      &.is-uploading {
+        background: #eef6ff;
+        color: #2f7fd0;
+      }
+
+      &.is-uploaded {
+        background: #e8f4f1;
+        color: #0b8e80;
+      }
+
+      &.is-failed {
+        background: #fdeeee;
+        color: #d9534f;
+      }
+    }
+
+    .upload-item-retry {
+      flex: none;
+      margin-right: 6px;
+      padding: 2px 8px;
+      border: 1px solid #d9c7c7;
+      border-radius: 4px;
+      background: #fff;
+      color: #d9534f;
+      font-size: 12px;
+      cursor: pointer;
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+    }
+
     .upload-item-remove {
       flex: none;
       padding: 2px 4px;
@@ -658,6 +829,111 @@ export default {
       &:disabled {
         opacity: 0.5;
         cursor: default;
+      }
+    }
+  }
+
+  .session-files {
+    margin-top: 12px;
+    border: 1px solid #e8f0ee;
+    border-radius: 8px;
+    background: #fafcfc;
+    overflow: hidden;
+  }
+
+  .session-files-head {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 9px 12px;
+    border: none;
+    background: none;
+    font-size: 13px;
+    color: #3c4a58;
+    cursor: pointer;
+
+    .session-files-icon {
+      margin-right: 6px;
+    }
+
+    .session-files-title {
+      font-weight: 600;
+    }
+
+    .session-files-count {
+      margin-left: 8px;
+      padding: 0 7px;
+      border-radius: 9px;
+      background: #e8f4f1;
+      color: #0b8e80;
+      font-size: 11px;
+      line-height: 18px;
+    }
+
+    .session-files-action {
+      margin-left: auto;
+      color: #8a97a8;
+      font-size: 12px;
+    }
+  }
+
+  .session-files-body {
+    padding: 0 12px 10px;
+    border-top: 1px dashed #e8f0ee;
+  }
+
+  .session-files-hint {
+    margin: 9px 0 0;
+    color: #8a97a8;
+    font-size: 12px;
+
+    &.is-error {
+      color: #d9534f;
+    }
+  }
+
+  .session-files-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .session-file {
+    display: flex;
+    align-items: center;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #3c4a58;
+
+    .session-file-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .session-file-size {
+      flex: none;
+      margin: 0 10px;
+      color: #9aa8b5;
+      font-size: 12px;
+    }
+
+    .session-file-tag {
+      flex: none;
+      padding: 1px 7px;
+      border-radius: 8px;
+      font-size: 11px;
+
+      &.platform {
+        background: #e6f5f2;
+        color: #0b8e80;
+      }
+
+      &.local {
+        background: #fdf3e4;
+        color: #b07a1d;
       }
     }
   }
@@ -768,21 +1044,6 @@ export default {
       p {
         margin: 0 0 8px;
       }
-
-      button {
-        padding: 5px 14px;
-        border: 1px solid #f0c9c5;
-        border-radius: 6px;
-        background: #fff;
-        color: #d9534f;
-        font-size: 13px;
-        cursor: pointer;
-
-        &:disabled {
-          opacity: 0.5;
-          cursor: default;
-        }
-      }
     }
   }
 
@@ -879,6 +1140,20 @@ export default {
         font-size: 22px;
       }
 
+      .upload-item-status {
+        margin-right: 12px;
+        padding: 2px 12px;
+        border-radius: 8px;
+        font-size: 20px;
+      }
+
+      .upload-item-retry {
+        margin-right: 12px;
+        padding: 4px 16px;
+        border-radius: 8px;
+        font-size: 22px;
+      }
+
       .upload-item-remove {
         font-size: 30px;
       }
@@ -923,6 +1198,57 @@ export default {
         padding: 0 32px;
         border-radius: 14px;
         font-size: 26px;
+      }
+    }
+
+    .session-files {
+      margin-top: 22px;
+      border-radius: 14px;
+    }
+
+    .session-files-head {
+      padding: 16px 22px;
+      font-size: 26px;
+
+      .session-files-icon {
+        margin-right: 12px;
+      }
+
+      .session-files-count {
+        margin-left: 14px;
+        padding: 0 12px;
+        border-radius: 16px;
+        font-size: 20px;
+        line-height: 34px;
+      }
+
+      .session-files-action {
+        font-size: 22px;
+      }
+    }
+
+    .session-files-body {
+      padding: 0 22px 18px;
+    }
+
+    .session-files-hint {
+      margin-top: 16px;
+      font-size: 22px;
+    }
+
+    .session-file {
+      margin-top: 14px;
+      font-size: 24px;
+
+      .session-file-size {
+        margin: 0 16px;
+        font-size: 22px;
+      }
+
+      .session-file-tag {
+        padding: 2px 12px;
+        border-radius: 14px;
+        font-size: 20px;
       }
     }
 
@@ -976,12 +1302,6 @@ export default {
 
       .turn-error {
         font-size: 26px;
-
-        button {
-          padding: 10px 26px;
-          border-radius: 12px;
-          font-size: 24px;
-        }
       }
     }
 

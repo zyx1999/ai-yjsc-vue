@@ -517,6 +517,82 @@ $line: #e5ebed;
   font-size: 11px;
 }
 .composer .composer-attachments button:disabled { opacity: .5; }
+.composer .composer-files {
+  margin: 2px 0 6px;
+}
+.composer .composer-files-head {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 6px 9px;
+  border: 1px solid #d9e8e5;
+  border-radius: 6px;
+  background: #f4faf8;
+  color: #3c5a56;
+  font-size: 11px;
+  cursor: pointer;
+}
+.composer .composer-files-head i {
+  margin-right: 6px;
+}
+.composer .composer-files-count {
+  margin-left: 8px;
+  padding: 0 7px;
+  border-radius: 9px;
+  background: #e2f1ee;
+  color: #226c68;
+  line-height: 16px;
+}
+.composer .composer-files-action {
+  margin-left: auto;
+  color: #8a97a8;
+}
+.composer .composer-files-body {
+  margin-top: 6px;
+  padding: 2px 9px 8px;
+  border: 1px dashed #d9e8e5;
+  border-radius: 6px;
+  background: #fbfdfd;
+}
+.composer .composer-files-hint {
+  margin: 6px 0 0;
+  color: #8a97a8;
+  font-size: 10px;
+}
+.composer .composer-files-hint.is-error { color: #c25b52; }
+.composer .composer-files-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.composer .composer-file {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #3c4a58;
+}
+.composer .composer-file-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.composer .composer-file-size {
+  flex: none;
+  margin: 0 8px;
+  color: #9aa8b5;
+}
+.composer .composer-file-tag {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 7px;
+  font-size: 10px;
+  line-height: 16px;
+}
+.composer .composer-file-tag.platform { background: #e6f5f2; color: #0b8e80; }
+.composer .composer-file-tag.local { background: #fdf3e4; color: #b07a1d; }
 .composer .composer-notice {
   margin: 3px 0 8px;
   color: #956b22;

@@ -63,6 +63,10 @@ export const proposalFiles = (task, id) =>
       '/files'
   )
 
+/** 会话文件列表（平台工作区文件与已登记材料合并）。 */
+export const sessionFiles = (task) =>
+  client.get(root + '/sessions/' + encodeURIComponent(task) + '/chat/files')
+
 // 服务端模型等待可能接近超时上限，客户端额外留出宽限，避免与服务端超时同时触发造成误判。
 const STREAM_GRACE_MS = 120000
 
