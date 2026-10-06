@@ -15,7 +15,13 @@ export default {
     caret: { type: Boolean, default: false }
   },
   render (h) {
-    const children = this.content ? renderMarkdown(h, this.content) : []
+    let children
+    try {
+      children = this.content ? renderMarkdown(h, this.content) : []
+    } catch (error) {
+      // 解析异常不得拖垮整个页面：降级为纯文本展示原始内容。
+      children = [h('pre', { class: 'markdown-fallback' }, this.content)]
+    }
     if (this.caret) children.push(h('span', { class: 'markdown-caret' }, '▍'))
     return h('div', { class: 'markdown-view' }, children)
   }

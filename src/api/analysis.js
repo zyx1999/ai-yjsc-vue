@@ -45,9 +45,26 @@ function request (config) {
   })
 }
 
-/** 创建分析会话（不触发登录）。 */
-export function createSession () {
-  return request({ url: root + '/sessions', method: 'post' })
+/** 创建分析会话（不触发登录）；kind 区分窗口（credit=征信 / bankflow=流水）。 */
+export function createSession (kind) {
+  return request({ url: root + '/sessions', method: 'post', data: kind ? { kind: kind } : {} })
+}
+
+/** 历史会话列表（当前用户，按 kind 过滤，最近使用在前）。 */
+export function listSessions (kind) {
+  return request({
+    url: root + '/sessions',
+    method: 'get',
+    params: kind ? { kind: kind } : {}
+  })
+}
+
+/** 删除（软删除）历史会话。 */
+export function deleteSession (sessionId) {
+  return request({
+    url: root + '/sessions/' + encodeURIComponent(sessionId),
+    method: 'delete'
+  })
 }
 
 /** 读取会话详情（用于断流后核实结果），返回 { session, messages }。 */
@@ -74,7 +91,9 @@ export function uploadFile (sessionId, file) {
 export function listFiles (sessionId) {
   return request({
     url: root + '/sessions/' + encodeURIComponent(sessionId) + '/files',
-    method: 'get'
+    method: 'get',
+    // 平台文件列举应快速返回；避免列表接口拖住页面的“读取中”状态。
+    timeout: 20000
   })
 }
 
@@ -140,7 +159,10 @@ export function streamChat (sessionId, text, attachmentIds, onEvent) {
     }
     rejectPending = (message) => settle(reject, pendingError(message))
 
-    xhr.open('POST', url)
+    // 第三个参数必须显式传 true：mockjs 会全局替换 XMLHttpRequest，其未匹配请求的透传
+    // 会把缺省的 async 参数原样传给原生 open()，导致请求被当成同步 XHR，
+    // 在长耗时会话（SSE pending）期间阻塞整个页面 JS。
+    xhr.open('POST', url, true)
     xhr.withCredentials = true
     xhr.setRequestHeader('Content-Type', 'application/json')
     xhr.setRequestHeader('Accept', 'text/event-stream')

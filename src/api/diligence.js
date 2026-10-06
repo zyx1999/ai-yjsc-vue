@@ -101,11 +101,14 @@ export function streamChat(task, text, onEvent, attachment) {
     const startedAt = Date.now()
     const elapsed = () => Date.now() - startedAt + 'ms'
     const xhr = new XMLHttpRequest()
+    // 第三个参数必须显式传 true：mockjs 全局替换 XMLHttpRequest 后，未匹配请求的
+    // 透传会把缺省的 async 原样传给原生 open()，使请求被当成同步 XHR，长耗时会话期间阻塞页面。
     xhr.open(
       'POST',
       backendUrl(
         root + '/sessions/' + encodeURIComponent(task) + '/chat/events'
-      )
+      ),
+      true
     )
     xhr.withCredentials = true
     xhr.setRequestHeader('Content-Type', 'application/json')

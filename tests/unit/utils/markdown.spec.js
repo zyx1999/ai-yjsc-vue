@@ -35,6 +35,30 @@ describe('Utils:markdown', () => {
     expect(blocks[1]).toEqual({ type: 'ordered-list', items: ['第一项', '第二项'] })
   })
 
+  it('terminates on empty list items (regression: page hangs)', () => {
+    // 回归：仅 "- "/"1. " 的空条目曾让解析器在同一行无限循环，导致回答渲染时页面假死。
+    const blocks = parseBlocks('- \n正常段落\n\n1. \n2. 正常项\n\n-　')
+    expect(blocks.filter(block => block.type === 'unordered-list')).toEqual([
+      { type: 'unordered-list', items: [''] },
+      { type: 'unordered-list', items: [''] }
+    ])
+    expect(blocks.find(block => block.type === 'ordered-list')).toEqual({
+      type: 'ordered-list',
+      items: ['', '正常项']
+    })
+    expect(blocks.find(block => block.type === 'paragraph')).toEqual({
+      type: 'paragraph',
+      lines: ['正常段落']
+    })
+  })
+
+  it('terminates on pathological fence and table drafts', () => {
+    // 未闭合围栏、只有分隔行的表格草稿、全角空格条目都必须能解析结束。
+    expect(parseBlocks('```js\nconst a = 1').length).toBe(1)
+    expect(parseBlocks('|------|\n|------|').length).toBe(1)
+    expect(parseBlocks('-　\n后续').length).toBe(2)
+  })
+
   it('keeps paragraph line breaks and parses rules and quotes', () => {
     const blocks = parseBlocks('**报告编号**：2026\n**报告时间**：2026-07-13\n\n---\n\n> 风险提示：关注担保')
     expect(blocks[0].type).toBe('paragraph')

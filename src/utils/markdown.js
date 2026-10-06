@@ -28,88 +28,95 @@ function startsBlock (lines, index) {
   return index + 1 < lines.length && line.indexOf('|') >= 0 && isTableDivider(lines[index + 1])
 }
 
+/** 解析单个块，返回下一个待处理行号；无论输入多特殊都必须严格前进。 */
+function parseBlockAt (lines, index, blocks) {
+  const line = lines[index]
+  if (!line.trim()) return index + 1
+
+  const fence = line.trim().match(/^```\s*([^\s`]*)/)
+  if (fence) {
+    const code = []
+    index += 1
+    while (index < lines.length && !/^```\s*$/.test(lines[index].trim())) {
+      code.push(lines[index])
+      index += 1
+    }
+    if (index < lines.length) index += 1
+    blocks.push({ type: 'code', language: fence[1] || '', text: code.join('\n') })
+    return index
+  }
+
+  const heading = line.match(/^(#{1,6})\s+(.+)$/)
+  if (heading) {
+    blocks.push({ type: 'heading', level: heading[1].length, text: heading[2] })
+    return index + 1
+  }
+
+  if (/^\s*([-*_])(?:\s*\1){2,}\s*$/.test(line)) {
+    blocks.push({ type: 'rule' })
+    return index + 1
+  }
+
+  if (index + 1 < lines.length && line.indexOf('|') >= 0 && isTableDivider(lines[index + 1])) {
+    const rows = []
+    const header = splitTableRow(line)
+    index += 2
+    while (index < lines.length && lines[index].trim() && lines[index].indexOf('|') >= 0) {
+      rows.push(splitTableRow(lines[index]))
+      index += 1
+    }
+    blocks.push({ type: 'table', header, rows })
+    return index
+  }
+
+  if (/^>\s?/.test(line)) {
+    const quote = []
+    while (index < lines.length && /^>\s?/.test(lines[index])) {
+      quote.push(lines[index].replace(/^>\s?/, ''))
+      index += 1
+    }
+    blocks.push({ type: 'quote', lines: quote })
+    return index
+  }
+
+  const unordered = /^\s*[-+*]\s+/.test(line)
+  const ordered = !unordered && /^\s*\d+\.\s+/.test(line)
+  if (unordered || ordered) {
+    // 条目允许为空（如仅 "- " 的行）：空内容必须同样消耗行号，
+    // 否则条目匹配失败时解析器会在同一行上无限循环（曾导致页面假死）。
+    const matcher = unordered ? /^\s*[-+*]\s+(.*)$/ : /^\s*\d+\.\s+(.*)$/
+    const items = []
+    while (index < lines.length) {
+      const item = lines[index].match(matcher)
+      if (!item) break
+      items.push(item[1])
+      index += 1
+    }
+    if (items.length) {
+      blocks.push({ type: ordered ? 'ordered-list' : 'unordered-list', items })
+      return index
+    }
+  }
+
+  const paragraph = [line]
+  index += 1
+  while (index < lines.length && lines[index].trim() && !startsBlock(lines, index)) {
+    paragraph.push(lines[index])
+    index += 1
+  }
+  blocks.push({ type: 'paragraph', lines: paragraph })
+  return index
+}
+
 /** 将 Markdown 源文本解析为块级结构数组。 */
 export function parseBlocks (source) {
   const lines = String(source || '').replace(/\r\n?/g, '\n').split('\n')
   const blocks = []
   let index = 0
   while (index < lines.length) {
-    const line = lines[index]
-    if (!line.trim()) {
-      index += 1
-      continue
-    }
-
-    const fence = line.trim().match(/^```\s*([^\s`]*)/)
-    if (fence) {
-      const code = []
-      index += 1
-      while (index < lines.length && !/^```\s*$/.test(lines[index].trim())) {
-        code.push(lines[index])
-        index += 1
-      }
-      if (index < lines.length) index += 1
-      blocks.push({ type: 'code', language: fence[1] || '', text: code.join('\n') })
-      continue
-    }
-
-    const heading = line.match(/^(#{1,6})\s+(.+)$/)
-    if (heading) {
-      blocks.push({ type: 'heading', level: heading[1].length, text: heading[2] })
-      index += 1
-      continue
-    }
-
-    if (/^\s*([-*_])(?:\s*\1){2,}\s*$/.test(line)) {
-      blocks.push({ type: 'rule' })
-      index += 1
-      continue
-    }
-
-    if (index + 1 < lines.length && line.indexOf('|') >= 0 && isTableDivider(lines[index + 1])) {
-      const rows = []
-      const header = splitTableRow(line)
-      index += 2
-      while (index < lines.length && lines[index].trim() && lines[index].indexOf('|') >= 0) {
-        rows.push(splitTableRow(lines[index]))
-        index += 1
-      }
-      blocks.push({ type: 'table', header, rows })
-      continue
-    }
-
-    if (/^>\s?/.test(line)) {
-      const quote = []
-      while (index < lines.length && /^>\s?/.test(lines[index])) {
-        quote.push(lines[index].replace(/^>\s?/, ''))
-        index += 1
-      }
-      blocks.push({ type: 'quote', lines: quote })
-      continue
-    }
-
-    const unordered = /^\s*[-+*]\s+/.test(line)
-    const ordered = /^\s*\d+\.\s+/.test(line)
-    if (unordered || ordered) {
-      const matcher = unordered ? /^\s*[-+*]\s+(.+)$/ : /^\s*\d+\.\s+(.+)$/
-      const items = []
-      while (index < lines.length) {
-        const item = lines[index].match(matcher)
-        if (!item) break
-        items.push(item[1])
-        index += 1
-      }
-      blocks.push({ type: ordered ? 'ordered-list' : 'unordered-list', items })
-      continue
-    }
-
-    const paragraph = [line]
-    index += 1
-    while (index < lines.length && lines[index].trim() && !startsBlock(lines, index)) {
-      paragraph.push(lines[index])
-      index += 1
-    }
-    blocks.push({ type: 'paragraph', lines: paragraph })
+    const next = parseBlockAt(lines, index, blocks)
+    // 防御：任何解析分支都必须前进，保证解析必然终止（回归空列表项死循环问题）。
+    index = next > index ? next : index + 1
   }
   return blocks
 }

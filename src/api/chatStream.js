@@ -24,7 +24,9 @@ export function streamMessage (sessionId, payload, options) {
     encodeURIComponent(sessionId) + '/messages'
 
   const xhr = new XMLHttpRequest()
-  xhr.open('POST', url)
+  // 显式传 async=true：mockjs 全局替换 XMLHttpRequest 后，未匹配请求的透传
+  // 会把缺省的 async 原样传给原生 open()，使请求被当成同步 XHR 而阻塞页面。
+  xhr.open('POST', url, true)
   xhr.withCredentials = true
   xhr.setRequestHeader('Content-Type', 'application/json')
   xhr.setRequestHeader('Accept', 'text/event-stream')
