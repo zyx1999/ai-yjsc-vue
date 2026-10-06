@@ -9,6 +9,12 @@
       />
       <p v-if="isError" class="bubble-error">{{ message.content }}</p>
       <p v-else-if="message.pending && !message.content" class="bubble-loading">正在思考，请稍候…</p>
+      <markdown-view
+        v-else-if="isMarkdown"
+        class="bubble-markdown"
+        :content="message.content"
+        :caret="message.revealing"
+      />
       <p v-else class="bubble-text">{{ message.content }}<span v-if="message.revealing" class="bubble-caret">▍</span></p>
       <p v-if="isUser && message.error" class="bubble-error bubble-error-inline">{{ message.error }}</p>
       <div v-if="isUnknown" class="bubble-refresh" @click="$emit('refresh')">重新核实会话状态</div>
@@ -28,13 +34,15 @@
 <script>
 import RunProgress from './runProgress'
 import AttachmentCard from './attachmentCard'
+import MarkdownView from '@/components/markdown/MarkdownView.vue'
 import { shortTime } from '@/utils/chatTime'
 
 export default {
   name: 'MessageBubble',
   components: {
     RunProgress,
-    AttachmentCard
+    AttachmentCard,
+    MarkdownView
   },
   props: {
     message: {
@@ -53,6 +61,10 @@ export default {
       return !this.isUser &&
         (this.message.status === 'FAILED' || this.message.status === 'UNKNOWN') &&
         !!this.message.content
+    },
+    // 助手答复按 Markdown 渲染（大模型返回报告型内容：标题 / 表格 / 列表等）
+    isMarkdown () {
+      return !this.isUser && !!this.message.content
     },
     timeText () {
       return shortTime(this.message.createdAt)
@@ -124,6 +136,10 @@ export default {
     .bubble-text {
       margin: 0;
       white-space: pre-wrap;
+    }
+
+    .bubble-markdown {
+      margin: 0;
     }
 
     .bubble-caret {

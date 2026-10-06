@@ -12,6 +12,12 @@
       <div class="nav-current">
         <i class="el-icon-chat-dot-square" /> 企业尽调
       </div>
+      <router-link class="nav-link" to="/analysis/credit">
+        <i class="el-icon-document" /> 征信分析
+      </router-link>
+      <router-link class="nav-link" to="/analysis/bankflow">
+        <i class="el-icon-sort" /> 流水分析
+      </router-link>
       <div class="nav-caption history-caption">
         最近会话 <span>{{ sessions.length }}</span>
       </div>

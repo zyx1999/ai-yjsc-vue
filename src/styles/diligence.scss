@@ -141,6 +141,19 @@ $line: #e5ebed;
   display: flex;
   gap: 11px;
 }
+.nav-link {
+  margin-top: 4px;
+  padding: 12px;
+  border-radius: 6px;
+  color: #a6bec3;
+  display: flex;
+  gap: 11px;
+  text-decoration: none;
+}
+.nav-link:hover {
+  background: #1c464d;
+  color: #eaf7f4;
+}
 .history-caption {
   display: flex;
   justify-content: space-between;
@@ -1205,6 +1218,7 @@ $line: #e5ebed;
   .brand-lockup > div,
   .nav-caption,
   .nav-current,
+  .nav-link,
   .session-link,
   .rail-bottom > div {
     display: none;
@@ -1310,6 +1324,7 @@ $line: #e5ebed;
   .brand-lockup > div,
   .nav-caption,
   .nav-current,
+  .nav-link,
   .session-link,
   .rail-bottom > div {
     display: none;
